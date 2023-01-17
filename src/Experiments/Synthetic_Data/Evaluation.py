@@ -68,7 +68,7 @@ if __name__ == '__main__':
     limit_cs = True
     time_limit = 120 * 60
     cvi = "predict"
-    mkr_path = Path("../MetaKnowledgeRepository/")
+    mkr_path = Path("../../MetaKnowledgeRepository/")
 
     path_to_store_results = Path("../evaluation_results")
     if not path_to_store_results.exists():
