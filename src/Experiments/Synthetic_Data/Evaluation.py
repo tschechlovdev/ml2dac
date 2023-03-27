@@ -28,9 +28,9 @@ def compute_ari_values(optimizer_result_df, ground_truth_labels):
 
 def process_result_to_dataframe(optimizer_result, additional_info):
     selected_cvi = additional_info["cvi"]
-    # The result of the application phase an optimizer instance that holds the history of executed
+    # The result of the application phase is an optimizer instance that holds the history of executed
     # configurations with their runtime, cvi score, and so on.
-    # We can also access the predicted clustering labels of each configuration to compute ARI.
+    # We can also access the predicted clustering labels of each configuration to compute ARI values.
     optimizer_result_df = optimizer_result.get_runhistory_df()
     for key, value in additional_info.items():
         if key == "algorithms":

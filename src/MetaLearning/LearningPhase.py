@@ -19,8 +19,8 @@ from Optimizer.OptimizerSMAC import SMACOptimizer
 from Utils import Helper
 from Utils.Helper import mf_set_to_string
 
-# Has to be adjusted according to your working directory!
-mkr_path = Path("src/MetaKnowledgeRepository")
+# TODO: How to fix the path issue? Path depends from where your working directory is ...
+mkr_path = Path("../MetaKnowledgeRepository")
 
 evaluated_configs_filename = "evaluated_configs.csv"
 optimal_cvi_file_name = "optimal_cvi.csv"
@@ -145,7 +145,9 @@ def train_classifier(classifier=RandomForestClassifier):
         # Train a model for all datasets
         # We use this for "new" application phases
         train_model_not_for_dataset(dataset=None, mf_set=mf_set, name_meta_feature_set=name_meta_feature_set,
-                                    optimal_cvi=optimal_cvi, prediction_cols=prediction_cols, classifier=classifier)
+                                    optimal_cvi=optimal_cvi,
+                                    prediction_cols=prediction_cols,
+                                    classifier=classifier)
 
 
 def evalute_configurations(n_loops, time_limit, datasets, dataset_names, dataset_labels):

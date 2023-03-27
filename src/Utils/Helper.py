@@ -21,7 +21,10 @@ def get_model_name(classifier_instance=RandomForestClassifier()):
 
 
 def hopkins(data_frame, sampling_size):
-    """Assess the clusterability of a dataset. A score between 0 and 1, a score around 0.5 express
+    """
+    Code taken from pyclustertend: https://github.com/lachhebo/pyclustertend/blob/master/pyclustertend/hopkins.py
+    Slightly adjusted
+    Assess the clusterability of a dataset. A score between 0 and 1, a score around 0.5 express
     no clusterability and a score tending to 0 express a high cluster tendency.
 
     Parameters
@@ -100,7 +103,7 @@ def add_missing_iterations(optimizer_result_df, n_loops):
     Adds the iterations that are not present due to the fact that we only track the best configurations.
     This is required for nicer plots.
     :param optimizer_result_df:
-    :return: online_opt_result_df that now contains iterations from 1 to max_iterations in the dataframe
+    :return: optimizer_result_df that now contains iterations from 1 to max_iterations in the dataframe
     """
     iterations = optimizer_result_df["iteration"].values
     if len(iterations > 0):
@@ -130,4 +133,6 @@ def add_iteration_metric_wallclock_time(optimizer_result_df, selected_cvi):
     optimizer_result_df['max iteration'] = max_iteration
     optimizer_result_df = optimizer_result_df[optimizer_result_df[selected_cvi]
                                               == optimizer_result_df['CVI score']]
+
+
     return optimizer_result_df

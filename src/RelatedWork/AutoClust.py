@@ -105,7 +105,12 @@ def run_online_on_dataset(X, y, name, mlp):
     rw_opt_result_for_dataset = rw_opt_result_for_dataset.sort_values(['distance', 'ARI'], ascending=[True, False])
 
     # 1.5) get best algorithm
-    best_algorithm = rw_opt_result_for_dataset['algorithm'].values[0]
+    algorithms = rw_opt_result_for_dataset['algorithm'].unique()
+    if X.shape[0] <= 20000 and algorithms[0] == ClusteringCS.SPECTRAL_ALGORITHM:
+        best_algorithm = algorithms[1]
+    else:
+        best_algorithm = algorithms[0]
+
 
     ###############################################################################
     # 2.) HPO with/for best algorithm
@@ -200,6 +205,11 @@ from sklearn.datasets import load_iris, load_digits
 X, y = load_iris(return_X_y=True)
 X, y = load_digits(return_X_y=True)
 
+df = pd.read_csv("/home/tschecds/automlclustering/src/Experiments/real_world_data/letter.csv")
+X = df.iloc[:, :-1].to_numpy()
+y = df.iloc[:, -1].to_numpy()
+
+print(df)
 print(d_names)
 print(len(d_names))
 print(len(datasets))
@@ -229,6 +239,6 @@ store_mlp_model(mlp=mlp_model)
 #####################################################################
 
 # rw_run_online_phase()
-run_online_on_dataset(X, y, "iris", mlp_model)
+run_online_on_dataset(X, y, "letter", mlp_model)
 # related_work_online_result_all_datasets = pd.read_csv(related_work_path / 'related_work_online_result.csv',
 #                                                      index_col=None)

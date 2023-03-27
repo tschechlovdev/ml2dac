@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.datasets import make_blobs, make_circles, make_moons
 from sklearn.utils import check_random_state
+import pandas as pd
 
 random_state = 1234
 np.random.seed(random_state)
@@ -65,3 +66,38 @@ def generate_datasets(dataset_types=DATASET_TYPES):
 
                     different_shape_sets[f"type={data_type}-k={k}-n={n}-d={d}-noise={noise}"] = data
     return different_shape_sets
+
+
+from sklearn.model_selection import train_test_split
+
+shape_sets = generate_datasets()
+
+dataset_names = shape_sets.keys()
+
+df = pd.DataFrame()
+for data_name in dataset_names:
+    characteristic_dict = {}
+    splits = data_name.split("-")
+    type = splits[0].split("=")[1]
+    k = splits[1].split("=")[1]
+    n = splits[2].split("=")[1]
+    f = splits[3].split("=")[1]
+    noise = splits [4].split("=")[1]
+
+    characteristic_dict["dataset"] = data_name
+    characteristic_dict["type"] = type
+    characteristic_dict["k"] = k
+    characteristic_dict["n"] = n
+    characteristic_dict["f"] = f
+    characteristic_dict["noise"] = noise
+
+    df = df.append(characteristic_dict, ignore_index=True)
+
+
+df_train, df_test = train_test_split(df, stratify=df[["type", "k", "noise"]], train_size=0.8)
+print(df_train)
+print(df_test)
+
+print(df_train[df_train["type"]!= "gaussian"])
+
+print(len(df_train[df_train["type"]!= "gaussian"]))

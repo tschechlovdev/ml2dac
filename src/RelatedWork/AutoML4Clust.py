@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler
 from ClusteringCS import ClusteringCS
 
 from Experiments import DataGeneration
-from MetaLearning.MetricLearning import dataset_types, n_loops, time_limit
+from MetaLearning.LearningPhase import dataset_types, n_loops, time_limit
 from ClusterValidityIndices.CVIHandler import CVICollection
 from Optimizer.OptimizerSMAC import SMACOptimizer
 from RelatedWork.AutoClust import related_work_path

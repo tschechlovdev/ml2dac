@@ -75,7 +75,12 @@ def run_online_phase_for_cvi(cvi):
         rw_opt_result_for_dataset = rw_opt_result_for_dataset.sort_values(['distance', cvi.get_abbrev()], ascending=[True, False])
 
         # 1.5) get best algorithm
-        best_algorithm = rw_opt_result_for_dataset['algorithm'].values[0]
+        algorithms = rw_opt_result_for_dataset['algorithm'].unique()
+        if dataset.shape <= 20000 and algorithms[0] == ClusteringCS.SPECTRAL_ALGORITHM:
+            best_algorithm = algorithms[1]
+        else:
+            best_algorithm = algorithms[0]
+
         print(best_algorithm)
         ###############################################################################
         # 2.) HPO with/for best algorithm

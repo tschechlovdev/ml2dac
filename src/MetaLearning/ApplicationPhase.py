@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from ConfigSpace.configuration_space import Configuration
 from pandas.core.common import SettingWithCopyWarning
+from smac.tae import FirstRunCrashedException
 
 from ClusterValidityIndices.CVIHandler import CVICollection, CVI
 from ClusteringCS import ClusteringCS
@@ -18,6 +19,8 @@ from Utils import Helper
 from Utils.Helper import mf_set_to_string
 
 np.random.seed(1234)
+
+max_k_value = 100
 
 
 class ApplicationPhase():
@@ -45,7 +48,7 @@ class ApplicationPhase():
             raise ValueError("If no warmstarts are used, we cannot limit/reduce the configuration space as it depends "
                              "on the warmstarting configurations. Either use n_warmstarts > 0 or set limit_cs=False.")
 
-    def find_similar_dataset(self, meta_features, dataset_name):
+    def find_similar_dataset(self, meta_features, dataset_name, n_similar_datasets=1):
         # Load kdtree --> Used to find similar dataset more efficiently
         tree = load_kdtree(path=self.mkr_path / LearningPhase.meta_feature_path, mf_set=self.mf_set)
 
@@ -54,16 +57,18 @@ class ApplicationPhase():
         inds = inds[0]
         # We could also use the distances, but we do not need them here as the indices are already sorted by distance
         dists = dists[0]
+
         # Get similar datasets in their order w.r.t. distance
         most_similar_dataset_names = [self.dataset_names_to_use[ind] for ind in inds]
+
         if dataset_name == most_similar_dataset_names[0]:
             # In the experiments of our paper, we might have the same dataset in the MKR.
             # Therefore, we do not want to use it here and use the next-similar dataset
-            D_s = most_similar_dataset_names[1]
+            D_s = most_similar_dataset_names[1:n_similar_datasets+1]
         else:
             # Get the most-similar dataset, to use more datasets the following code has to be slightly adapted
-            # However, we figured out that using more less similar datasets leads to a performance decrease!
-            D_s = most_similar_dataset_names[0]
+            # However, we figured out that using more of less similar datasets leads to a performance decrease!
+            D_s = most_similar_dataset_names[0:n_similar_datasets+1]
         return D_s
 
     @staticmethod
@@ -104,6 +109,19 @@ class ApplicationPhase():
     @staticmethod
     def select_warmstart_configurations(ARI_s, n_warmstarts):
         if n_warmstarts > 0:
+            ARI_s["config_new"] = ARI_s["config"].astype('str')
+            ARI_s["config_new"] = ARI_s.apply(func=lambda x: ast.literal_eval(x["config"]), axis=1)
+
+            # Filter for configurations with less than max_k_value -> Use this for real-world data
+            ARI_s = ARI_s[[isinstance(x, dict) and
+                           ((not "n_clusters" in x.keys()) or (("n_clusters" in x.keys())
+                                                               and (x['n_clusters'] <= max_k_value)))
+                           and x["algorithm"] not in([ClusteringCS.SPECTRAL_ALGORITHM,
+                                                      ClusteringCS.AFFINITY_PROPAGATION_ALGORITHM,
+                                                      ClusteringCS.MEAN_SHIFT_ALGORITHM])
+                           for x in ARI_s["config_new"]]]
+            ARI_s = ARI_s.drop("config_new", axis=1)
+
             warmstart_configs = ARI_s.sort_values("ARI", ascending=True)[0:n_warmstarts]
             print(f"Selected Warmstart Configs:")
             print(warmstart_configs["config"])
@@ -127,7 +145,9 @@ class ApplicationPhase():
 
     @staticmethod
     def retrieve_ARI_values_for_similar_dataset(EC, D_s):
-        EC_s = EC[EC["dataset"] == D_s]
+        if not isinstance(D_s, list):
+            D_s = [D_s]
+        EC_s = EC[EC["dataset"].isin(D_s)]
         ARI_s = EC_s[["config", "ARI"]]
         ARI_s = ApplicationPhase._remove_duplicates_from_ARI_s(ARI_s)
         return ARI_s
@@ -140,7 +160,8 @@ class ApplicationPhase():
                                     cvi="predict",  # Otherwise, a CVI from the CVICollection
                                     limit_cs=True,  # Used to reduce the configuration space based on warmstart configs
                                     time_limit=120 * 60,  # Set default timeout after 2 hours of optimization
-                                    optimizer=SMACOptimizer):
+                                    optimizer=SMACOptimizer,
+                                    n_similar_datasets=1):
 
         print("----------------------------------")
         self._validate_inputs(n_warmstarts, n_optimizer_loops, cvi, limit_cs)
@@ -159,7 +180,7 @@ class ApplicationPhase():
         additional_result_info["mf time"] = mf_time
 
         # retrieve similar dataset
-        d_s = self.find_similar_dataset(mf, dataset_name)
+        d_s = self.find_similar_dataset(mf, dataset_name, n_similar_datasets)
         additional_result_info["similar dataset"] = d_s
 
         print(f"most similar dataset is: {d_s}")
@@ -180,6 +201,7 @@ class ApplicationPhase():
 
         ### (a4) definition of configurations space (dependent on warmstart configurations) ###
         cs, algorithms = self.define_config_space(warmstart_configs, limit_cs)
+
         if n_warmstarts > 0:
             # update warmstart configurations
             warmstart_configs = warmstart_configs["config"]
@@ -193,14 +215,28 @@ class ApplicationPhase():
         ### (a5) optimizer loop ###
         print("----------------------------------")
         print("starting the optimization")
+
         opt_instance = optimizer(dataset=X,
-                                 true_labels=None,  # we do not have access to them in the application phase
-                                 cvi=cvi,
-                                 n_loops=n_optimizer_loops,
-                                 cs=cs,
-                                 wallclock_limit=time_limit
-                                 )
-        opt_instance.optimize(initial_configs=warmstart_configs)
+                             true_labels=None,  # we do not have access to them in the application phase
+                             cvi=cvi,
+                             n_loops=n_optimizer_loops,
+                             cs=cs,
+                             wallclock_limit=time_limit
+                             )
+
+        not_successful = True
+
+        while not_successful:
+            try:
+                opt_instance.optimize(initial_configs=warmstart_configs)
+                not_successful = False
+            except FirstRunCrashedException as e:
+                print(e)
+                print("Trying again with one less warmstart")
+                warmstart_configs = warmstart_configs[1:]
+                opt_instance.optimize(initial_configs=warmstart_configs)
+                not_successful = False
+
         print("----------------------------------")
         print("finished optimization")
         print(f"best obtained configuration is:")
@@ -218,4 +254,12 @@ if __name__ == '__main__':
 
     X, _ = make_blobs()
     ml2dac = ApplicationPhase()
-    ml2dac.optimize_with_meta_learning(X=X, cvi="predict", n_warmstarts=5, n_optimizer_loops=10)
+
+    ml2dac.optimize_with_meta_learning(X=X, cvi="predict", n_warmstarts=50, n_optimizer_loops=50, limit_cs=True,
+                                       n_similar_datasets=10)
+
+    ml2dac.optimize_with_meta_learning(X=X, cvi="predict", n_warmstarts=5, n_optimizer_loops=10, limit_cs=False)
+
+    ml2dac.optimize_with_meta_learning(X=X, cvi="predict", n_warmstarts=10, n_optimizer_loops=10, limit_cs=False)
+
+    ml2dac.optimize_with_meta_learning(X=X, cvi="predict", n_warmstarts=10, n_optimizer_loops=10, limit_cs=True)

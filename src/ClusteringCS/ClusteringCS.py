@@ -101,16 +101,25 @@ AFFINITY_PROPAGATION_ALGORITHM = "affinity_propagation"
 
 algorithms = [KMEANS_ALGORITHM, GMM_ALGORITHM,
               # KMEDOIDS,
-              MINI_BATCH_KMEANS, WARD_ALGORITHM, DBSCAN_ALGORITHM, BIRCH_ALGORITHM,
-              SPECTRAL_ALGORITHM, MEAN_SHIFT_ALGORITHM, AFFINITY_PROPAGATION_ALGORITHM]
+              MINI_BATCH_KMEANS,
+              WARD_ALGORITHM, DBSCAN_ALGORITHM, BIRCH_ALGORITHM,
+              SPECTRAL_ALGORITHM,
+              MEAN_SHIFT_ALGORITHM,
+              AFFINITY_PROPAGATION_ALGORITHM
+              ]
 
 k_range = (2, 200)
+# For real-world data
+#k_range = (2, 100)
+
 min_samples_range = (2, 200)
 eps_range = (0.1, 1)
 quantile_range = (0, 1.0)
 damping_range = (0.5, 0.99)
 
-n_clusters_algorithms = [KMEANS_ALGORITHM, MINI_BATCH_KMEANS, GMM_ALGORITHM, SPECTRAL_ALGORITHM, BIRCH_ALGORITHM,
+n_clusters_algorithms = [KMEANS_ALGORITHM, MINI_BATCH_KMEANS, GMM_ALGORITHM,
+                         SPECTRAL_ALGORITHM,
+                         BIRCH_ALGORITHM,
                          WARD_ALGORITHM]
 
 eps_hyperparameter = UniformFloatHyperparameter("eps", lower=eps_range[0],
@@ -153,7 +162,7 @@ ALGORITHMS_MAP = {KMEANS_ALGORITHM: ClusteringAlgorithm(name=KMEANS_ALGORITHM, a
                                                        parameters=[n_clusters_hyperparameter]),
                   SPECTRAL_ALGORITHM: ClusteringAlgorithm(name=SPECTRAL_ALGORITHM, algorithm_class=SpectralClustering,
                                                           parameters=[n_clusters_hyperparameter],
-                                                          additional_kwargs={"n_init": 1,"random_state": 1234
+                                                       additional_kwargs={"n_init": 1,"random_state": 1234
                                                                              # "n_jobs": -1
                                                                              }),
                   DBSCAN_ALGORITHM: ClusteringAlgorithm(name=DBSCAN_ALGORITHM, algorithm_class=DBSCAN,
