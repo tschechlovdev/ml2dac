@@ -23,14 +23,16 @@ np.random.seed(1234)
 max_k_value = 100
 
 
-class ApplicationPhase():
+class ApplicationPhase:
     def __init__(self, mkr_path=LearningPhase.mkr_path,
                  shape_sets=DataGeneration.generate_datasets(),  # Datasets from the Learning Phase
-                 mf_set=MetaFeatureExtractor.meta_feature_sets[0]):
+                 mf_set=MetaFeatureExtractor.meta_feature_sets[0],
+                 k_range=None):
         self.mkr_path = mkr_path
         self.shape_sets = shape_sets
         self.mf_set = mf_set
         self.dataset_names_to_use = list(self.shape_sets.keys())
+        self.k_range = k_range
 
     @staticmethod
     def _validate_inputs(n_warmstarts, n_loops, cvi, limit_cs):
@@ -64,11 +66,11 @@ class ApplicationPhase():
         if dataset_name == most_similar_dataset_names[0]:
             # In the experiments of our paper, we might have the same dataset in the MKR.
             # Therefore, we do not want to use it here and use the next-similar dataset
-            D_s = most_similar_dataset_names[1:n_similar_datasets+1]
+            D_s = most_similar_dataset_names[1:n_similar_datasets + 1]
         else:
             # Get the most-similar dataset, to use more datasets the following code has to be slightly adapted
             # However, we figured out that using more of less similar datasets leads to a performance decrease!
-            D_s = most_similar_dataset_names[0:n_similar_datasets+1]
+            D_s = most_similar_dataset_names[0:n_similar_datasets]
         return D_s
 
     @staticmethod
@@ -116,9 +118,9 @@ class ApplicationPhase():
             ARI_s = ARI_s[[isinstance(x, dict) and
                            ((not "n_clusters" in x.keys()) or (("n_clusters" in x.keys())
                                                                and (x['n_clusters'] <= max_k_value)))
-                           and x["algorithm"] not in([ClusteringCS.SPECTRAL_ALGORITHM,
-                                                      ClusteringCS.AFFINITY_PROPAGATION_ALGORITHM,
-                                                      ClusteringCS.MEAN_SHIFT_ALGORITHM])
+                           and x["algorithm"] not in ([ClusteringCS.SPECTRAL_ALGORITHM,
+                                                       ClusteringCS.AFFINITY_PROPAGATION_ALGORITHM,
+                                                       ClusteringCS.MEAN_SHIFT_ALGORITHM])
                            for x in ARI_s["config_new"]]]
             ARI_s = ARI_s.drop("config_new", axis=1)
 
@@ -130,17 +132,16 @@ class ApplicationPhase():
         else:
             return []
 
-    @staticmethod
-    def define_config_space(warmstart_configs, limit_cs=True):
+    def define_config_space(self, warmstart_configs, limit_cs=True):
         if limit_cs:
             warmstart_configs["algorithm"] = ApplicationPhase._assign_algorithm_column(warmstart_configs)
             algorithms = list(warmstart_configs["algorithm"].unique())
             # Use algorithms from warmstarts to build CS
-            cs = ClusteringCS.build_config_space(clustering_algorithms=algorithms)
+            cs = ClusteringCS.build_config_space(clustering_algorithms=algorithms, k_range=self.k_range)
         else:
             algorithms = "all"
             # Use default config space
-            cs = ClusteringCS.build_config_space()
+            cs = ClusteringCS.build_config_space(k_range=self.k_range)
         return cs, algorithms
 
     @staticmethod
@@ -215,14 +216,14 @@ class ApplicationPhase():
         ### (a5) optimizer loop ###
         print("----------------------------------")
         print("starting the optimization")
-
+        print(cs)
         opt_instance = optimizer(dataset=X,
-                             true_labels=None,  # we do not have access to them in the application phase
-                             cvi=cvi,
-                             n_loops=n_optimizer_loops,
-                             cs=cs,
-                             wallclock_limit=time_limit
-                             )
+                                 true_labels=None,  # we do not have access to them in the application phase
+                                 cvi=cvi,
+                                 n_loops=n_optimizer_loops,
+                                 cs=cs,
+                                 wallclock_limit=time_limit
+                                 )
 
         not_successful = True
 

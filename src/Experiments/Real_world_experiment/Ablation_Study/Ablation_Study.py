@@ -5,40 +5,33 @@
 
 
 import os
-import pandas as pd
-import numpy as np
-from sklearn.datasets import load_iris, load_breast_cancer
-from MetaLearning.ApplicationPhase import ApplicationPhase
-from ClusterValidityIndices import CVIHandler
-from MetaLearning import MetaFeatureExtractor
-from pathlib import Path
-from pandas.core.common import SettingWithCopyWarning
-from Utils import Helper
+import shutil
 import warnings
 from pathlib import Path
-import shutil
-import time
+
+import pandas as pd
+from pandas.core.common import SettingWithCopyWarning
+
+from ClusterValidityIndices import CVIHandler
+from MetaLearning import MetaFeatureExtractor
+from MetaLearning.ApplicationPhase import ApplicationPhase
+from Utils import Helper
 
 warnings.filterwarnings(category=RuntimeWarning, action="ignore")
 warnings.filterwarnings(category=SettingWithCopyWarning, action="ignore")
 import numpy as np
+
 np.random.seed(0)
 # Specify where to find our MKR
-mkr_path = Path("../../MetaKnowledgeRepository/")
+mkr_path = Path("src/MetaKnowledgeRepository/")
 
 mf_set = MetaFeatureExtractor.meta_feature_sets[2]
 
 real_world_path = "real_world_data/"
-path_to_store_results = Path("real_world_results/ML2DAC/abl_study")
-files = [f for f in os.listdir(real_world_path) if os.path.isfile(real_world_path+ f)]
+path_to_store_results = Path("gen_results/evaluation_results/real_world/abl_study")
+files = [f for f in os.listdir(real_world_path) if os.path.isfile(real_world_path + f)]
 counter = 0
-for f in files:
-    print(f)
-    df = pd.read_csv(real_world_path + f)
-    print(df.shape)
-    print("--------")
-    if df.shape[0] <= 20000:
-        counter+=1
+print(files)
 print(counter)
 print(len(files))
 
@@ -65,19 +58,21 @@ def process_result_to_dataframe(optimizer_result, additional_info):
     for key, value in additional_info.items():
         if key == "algorithms":
             value = "+".join(value)
+        if key =="similar dataset":
+            value = value[0]
         optimizer_result_df[key] = value
 
-    #optimizer_result_df = Helper.add_iteration_metric_wallclock_time(optimizer_result_df, selected_cvi)
-    optimizer_result_df["iteration"] =  [i + 1 for i in range(len(optimizer_result_df))]
-    optimizer_result_df["wallclock time"] =  optimizer_result_df["runtime"].cumsum()
+    # optimizer_result_df = Helper.add_iteration_metric_wallclock_time(optimizer_result_df, selected_cvi)
+    optimizer_result_df["iteration"] = [i + 1 for i in range(len(optimizer_result_df))]
+    optimizer_result_df["wallclock time"] = optimizer_result_df["runtime"].cumsum()
 
     optimizer_result_df['CVI score'] = optimizer_result_df[selected_cvi]
     optimizer_result_df['Best CVI score'] = optimizer_result_df[selected_cvi].cummin()
     optimizer_result_df['ARI'] = compute_ari_values(optimizer_result_df, y)
     optimizer_result_df['Best ARI'] = optimizer_result_df.apply(
-        lambda row: 
+        lambda row:
         # Get ARI value of same rows with best CVI score, but the first one --> This is the one with the actual best CVI score
-        optimizer_result_df[(optimizer_result_df["Best CVI score"]==row['Best CVI score'])]["ARI"].values[0],
+        optimizer_result_df[(optimizer_result_df["Best CVI score"] == row['Best CVI score'])]["ARI"].values[0],
         axis=1)
 
     print(optimizer_result_df)
@@ -94,7 +89,7 @@ def process_result_to_dataframe(optimizer_result, additional_info):
 
 def clean_up_optimizer_directory(optimizer_instance):
     if os.path.exists(optimizer_instance.output_dir) and os.path.isdir(optimizer_instance.output_dir):
-                shutil.rmtree(optimizer_instance.output_dir)
+        shutil.rmtree(optimizer_instance.output_dir)
 
 
 # # Ablation Study
@@ -102,28 +97,27 @@ def clean_up_optimizer_directory(optimizer_instance):
 # In[9]:
 
 
-#files_to_use = ["iris.csv","ecoli.csv","dermatology.csv", "zoo.csv",]
+# files_to_use = ["iris.csv","ecoli.csv","dermatology.csv", "zoo.csv",]
 from smac.tae import FirstRunCrashedException
-mf_sets_to_use = [#MetaFeatureExtractor.meta_feature_sets[2], # "statistical"
-                  #MetaFeatureExtractor.meta_feature_sets[4], # ["statistical", "info-theory", "general"]
-                  MetaFeatureExtractor.meta_feature_sets[5], # ["statistical", "general"] --> Best one in general comparison
-                  #MetaFeatureExtractor.meta_feature_sets[8] # "autocluster"
-                 ]
 
-for run in range(10):
-    print(mf_sets_to_use)
-    for mf_set in mf_sets_to_use:
-        print("-------------")
-        print(f"Running with mf_set={mf_set}")
+if __name__ == '__main__':
+    mf_sets_to_use = [  # MetaFeatureExtractor.meta_feature_sets[2], # "statistical"
+        # MetaFeatureExtractor.meta_feature_sets[4], # ["statistical", "info-theory", "general"]
+        MetaFeatureExtractor.meta_feature_sets[5],  # ["statistical", "general"] --> Best one in general comparison
+        # MetaFeatureExtractor.meta_feature_sets[8] # "autocluster"
+    ]
 
-        n_warmstarts = [10, 25, 50]
+    runs = 10
+    w = 50
+    n_loops = 100  # Number of optimizer loops. This is n_loops = n_warmstarts + x
 
-        for w in n_warmstarts:
-            #for f in files:
+    for run in range(runs):
+        print(mf_sets_to_use)
+        for mf_set in mf_sets_to_use:
+            print("-------------")
+            print(f"Running with mf_set={mf_set}")
+            # for f in files:
             for f in files:
-
-                if "letter" not in f:
-                    continue
 
                 df = pd.read_csv(real_world_path + f)
                 X = df.iloc[:, :-1]
@@ -134,81 +128,77 @@ for run in range(10):
 
                 X = X.to_numpy()
                 y = y.to_numpy()
-                #if X.shape[0] != 20000:
-                #    continue
 
-                n_loops = 100 # Number of optimizer loops. This is n_loops = n_warmstarts + x
+                for component in ["all",
+                                  "no_algo_reduction",
+                                  "no_cvi_selection",
+                                  "no_warmstart"]:
+                    print("---------------------------------")
+                    print(f"Running component = {component}")
 
-                if X.shape[0] <= 10000000000:
-                     for component in ["no_algo_reduction", "only_warmstarts", "all", "no_cvi_selection", 
-                         "no_warmstart"]:
-                        print("---------------------------------")
-                        print(f"Running component = {component}")
+                    # Run our approach
+                    if component == "only_warmstarts":
+                        n_warmstarts = n_loops
+                        cvi = "predict"
+                        limit_cs = True
 
-                        # Run our approach
-                        if component == "only_warmstarts":
-                            n_warmstarts = n_loops
-                            cvi = "predict"
-                            limit_cs = True
+                    elif component == "no_algo_reduction":
+                        limit_cs = False
+                        cvi = "predict"
+                        n_warmstarts = w
 
-                        elif component == "no_algo_reduction":
-                            limit_cs = False
-                            cvi = "predict"
-                            n_warmstarts = w
+                    elif component == "no_warmstart":
+                        limit_cs = False
+                        n_warmstarts = 0
+                        cvi = "predict"
 
-                        elif component == "no_warmstart":
-                            limit_cs = False
-                            n_warmstarts = 0
-                            cvi = "predict"
+                    elif component == "no_cvi_selection":
+                        cvi = CVIHandler.CVICollection.DENSITY_BASED_VALIDATION
+                        limit_cs = True
+                        n_warmstarts = w
 
-                        elif component == "no_cvi_selection":
-                            cvi = CVIHandler.CVICollection.DENSITY_BASED_VALIDATION
-                            limit_cs = True
-                            n_warmstarts = w
+                    elif component == "all":
+                        n_warmstarts = w
+                        limit_cs = True
+                        cvi = "predict"
 
-                        elif component == "all":
-                            n_warmstarts = w
-                            limit_cs = True
-                            cvi = "predict"
+                    time_limit = 240 * 60  # Time limit of overall optimization --> Aborts earlier if n_loops not finished but time_limit reached
 
-                        time_limit = 240 * 60 # Time limit of overall optimization --> Aborts earlier if n_loops not finished but time_limit reached
+                    dataset_name = f
 
-                        dataset_name = f
+                    print(n_warmstarts)
+                    print(limit_cs)
+                    print(str(cvi))
 
-                        print(n_warmstarts)
-                        print(limit_cs)
-                        print(str(cvi))
+                    # Instantiate our approach
+                    ML2DAC = ApplicationPhase(mkr_path=mkr_path, mf_set=mf_set)
+                    try:
+                        optimizer_instance, additional_info = ML2DAC.optimize_with_meta_learning(X,
+                                                                                                 n_warmstarts=n_warmstarts,
+                                                                                                 n_optimizer_loops=n_loops,
+                                                                                                 limit_cs=limit_cs,
+                                                                                                 cvi=cvi,
+                                                                                                 time_limit=time_limit,
+                                                                                                 dataset_name=dataset_name)
+                        print(additional_info)
 
+                        optimizer_result_df = process_result_to_dataframe(optimizer_instance, additional_info)
 
-                        # Instantiate our approach
-                        ML2DAC = ApplicationPhase(mkr_path=mkr_path, mf_set=mf_set)
-                        try:
-                            optimizer_instance, additional_info = ML2DAC.optimize_with_meta_learning(X, 
-                                                                                                     n_warmstarts=n_warmstarts,
-                                                                                   n_optimizer_loops=n_loops, 
-                                                                                   limit_cs=limit_cs,
-                                                                                   cvi=cvi,
-                                                                                   time_limit=time_limit,
-                                                                                   dataset_name=dataset_name)
-                            print(additional_info)
+                        # Cleanup optimizer directory
+                        clean_up_optimizer_directory(optimizer_instance)
 
-                            optimizer_result_df = process_result_to_dataframe(optimizer_instance, additional_info)
+                    except FirstRunCrashedException as e:
+                        print(e)
+                        print("Generating empty file and skipping")
+                        optimizer_result_df = pd.DataFrame()
+                        optimizer_result_df[e] = True
 
-                            # Cleanup optimizer directory
-                            clean_up_optimizer_directory(optimizer_instance)
+                    mf_set_string = Helper.mf_set_to_string(mf_set)
+                    result_path = Path(path_to_store_results) / Path(mf_set_string) / f"warmstarts_{w}" / Path(
+                        component) / f"run_{run}"
+                    print("Resultpath:")
+                    print(result_path)
+                    if not result_path.exists():
+                        result_path.mkdir(exist_ok=True, parents=True)
 
-                        except FirstRunCrashedException as e:
-                            print(e)
-                            print("Generating empty file and skipping")
-                            optimizer_result_df = pd.DataFrame()
-                            optimizer_result_df[e] = True
-
-                        mf_set_string = Helper.mf_set_to_string(mf_set)
-                        result_path = Path(path_to_store_results) / Path(mf_set_string) /  f"warmstarts_{w}" /  Path(component) / f"run_{run}"
-                        print("Resultpath:")
-                        print(result_path)
-                        if not result_path.exists():
-                            result_path.mkdir(exist_ok=True, parents=True)
-
-                        optimizer_result_df.to_csv(result_path / dataset_name, index=False)
-
+                    optimizer_result_df.to_csv(result_path / dataset_name, index=False)

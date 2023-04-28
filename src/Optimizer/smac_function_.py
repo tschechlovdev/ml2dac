@@ -1,5 +1,7 @@
 import time
 
+import numpy as np
+
 from ClusteringCS import ClusteringCS
 from ClusterValidityIndices.CVIHandler import CVICollection, CVIType
 
@@ -12,11 +14,16 @@ def smac_function(config, optimizer_instance, **kwargs):
 
     t0 = time.time()
 
-    clust_algo_instance = ClusteringCS.ALGORITHMS_MAP[algorithm_name]
+    clust_algo_instance = ClusteringCS.get_ALGORITHMS_MAP()[algorithm_name]
     print(f"Executing Configuration: {config}")
 
     # Execute clustering algorithm
-    y = clust_algo_instance.execute_config(X, config)
+    try:
+        y = clust_algo_instance.execute_config(X, config)
+    except ValueError as e:
+        print(e)
+        y = np.random(low=0, high=100, size=X.shape[0])
+        
     # store additional info, such as algo and cvi runtime, and the predicted clustering labels
     algo_runtime = time.time() - t0
 

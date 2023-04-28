@@ -14,14 +14,14 @@ from sklearn.neighbors._kd_tree import KDTree
 from ClusterValidityIndices import CVIHandler
 from ClusterValidityIndices.CVIHandler import CVICollection
 from Experiments.DataGeneration import generate_datasets
-from MetaLearning import MetaFeatureExtractor
+from MetaLearning import MetaFeatureExtractor, LearningPhase
 from MetaLearning.ApplicationPhase import ApplicationPhase
 from MetaLearning.LearningPhase import mkr_path, optimal_cvi_file_name
 from MetaLearning.MetaFeatureExtractor import extract_meta_features
 from Optimizer.OptimizerSMAC import SMACOptimizer
 
 warnings.filterwarnings("ignore")
-mkr_path = Path("../../MetaKnowledgeRepository")
+mkr_path = LearningPhase.mkr_path
 
 
 def _remove_duplicates_from_ARI_s(ARI_s):
@@ -83,7 +83,7 @@ def clean_up_optimizer_directory(optimizer_instance):
 n_warmstarts = 25
 n_loops = 100
 limit_cs = True
-result_path = Path("results_same_family")
+result_path = Path("gen_results/evaluation_results/synthetic_data/vary_training_data")
 
 mf_set = MetaFeatureExtractor.meta_feature_sets[5]  # Mf-Set: Stats+General
 
@@ -118,17 +118,16 @@ print(df_train[df_train["type"] != "gaussian"])
 
 print(len(df_train[df_train["type"] != "gaussian"]))
 
-## TODO: Adjust Path!!!
 evaluated_configs = pd.read_csv(mkr_path / "evaluated_configs.csv")
 
 evaluated_configs = evaluated_configs.drop("Unnamed: 0", axis=1)
 print(evaluated_configs)
 
 test_data = df_test.iloc[0]
-runs = 5
+runs = 1
 
 for run in range(runs):
-
+    random_seed = (runs + 1) * 1234
     for i in range(len(df_test)):
         test_data = df_test.iloc[i]
         dataset_name = test_data["dataset"]
@@ -145,7 +144,7 @@ for run in range(runs):
         selected_training_data_df = selected_training_data_df.reset_index()
         selected_training_data_df = selected_training_data_df.drop("index", axis=1)
 
-        # If not using the same family, this *could* indeed be bad for us
+        # If not using the same family
         # training_datasets_df = df_train
 
         # Extract Meta-Features from test dataset
@@ -231,7 +230,7 @@ for run in range(runs):
             # Train classifier for training dataset
             mf_X = mfs_all_training_datasets[final_training_data["training_index"]]
             cvi_y = optimal_cvi_per_dataset["cvi"]
-            cvi_classifier = RandomForestClassifier()
+            cvi_classifier = RandomForestClassifier(random_state=random_seed)
             cvi_classifier.fit(mf_X, cvi_y)
 
             ### (a1) find similar dataset ###
@@ -278,7 +277,8 @@ for run in range(runs):
                                          cvi=predicted_cvi,
                                          n_loops=n_loops,
                                          cs=cs,
-                                         wallclock_limit=240 * 60
+                                         wallclock_limit=240 * 60,
+
                                          )
 
             opt_instance.optimize(initial_configs=warmstart_configs)

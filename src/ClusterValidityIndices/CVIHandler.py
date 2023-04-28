@@ -187,18 +187,18 @@ class CVICollection:
         "MLPMetric": "MLP"
     }
     internal_cvis = [CALINSKI_HARABASZ,
-                        DAVIES_BOULDIN,
-                        SILHOUETTE,
-                        # added scores
-                        DENSITY_BASED_VALIDATION,
-                        DUNN_INDEX,
-                        COGGINS_JAIN_INDEX,
-                        COP_SCORE
-                        ]
+                     DAVIES_BOULDIN,
+                     SILHOUETTE,
+                     # added scores
+                     DENSITY_BASED_VALIDATION,
+                     DUNN_INDEX,
+                     COGGINS_JAIN_INDEX,
+                     COP_SCORE
+                     ]
     external_cvis = [ADJUSTED_MUTUAL, ADJUSTED_RAND,
-                        COMPLETENESS_SCORE,
-                        FOWLKES_MALLOWS,
-                        HOMOGENEITY, V_MEASURE]
+                     COMPLETENESS_SCORE,
+                     FOWLKES_MALLOWS,
+                     HOMOGENEITY, V_MEASURE]
     all_cvis = external_cvis + internal_cvis
 
     @staticmethod

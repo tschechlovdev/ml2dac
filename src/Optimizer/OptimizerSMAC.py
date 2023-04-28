@@ -16,7 +16,7 @@ from smac.scenario.scenario import Scenario
 
 from ClusterValidityIndices import CVIHandler
 from ClusterValidityIndices.CVIHandler import CVICollection
-from ClusteringCS.ClusteringCS import CONFIG_SPACE_MAPPING, build_kmeans_space
+from ClusteringCS.ClusteringCS import build_kmeans_space
 from Optimizer.smac_function_ import smac_function
 
 
@@ -75,7 +75,7 @@ class AbstractOptimizer(ABC):
 
     def __init__(self, dataset, cvi: Union[Type[CVIHandler.CVI], CVIHandler.MLPCVI] = CVICollection.CALINSKI_HARABASZ,
                  cs: Type[ConfigurationSpace] = None, n_loops=None, output_dir=None,
-                 cut_off_time_minutes=5 * 60, wallclock_limit=120 * 60, true_labels=None,
+                 cut_off_time_seconds=5 * 60, wallclock_limit=120 * 60, true_labels=None,
                  random_sate=1234):
         """
         :param dataset: np.array of the dataset (without the labels)
@@ -111,11 +111,8 @@ class AbstractOptimizer(ABC):
             # n_features = self.dataset.shape[1]
             # build default config space
             self.cs = build_kmeans_space()
-        else:
-            if isinstance(cs, str) and cs in CONFIG_SPACE_MAPPING:
-                self.cs = CONFIG_SPACE_MAPPING[cs]
-            elif isinstance(cs, ConfigurationSpace):
-                self.cs = cs
+        elif isinstance(cs, ConfigurationSpace):
+            self.cs = cs
 
         self.true_labels = true_labels
         self.optimizer_result = None
@@ -125,7 +122,7 @@ class AbstractOptimizer(ABC):
         self.trajectory_dict_list = []
 
         # default cutoff time is 10 minutes. The cutoff time has to be given in seconds!
-        self.cutoff_time = cut_off_time_minutes
+        self.cutoff_time = cut_off_time_seconds
         # maximum runtime for the whole optimization procedure in seconds. Default is 60 minutes (60 * 60 seconds)
         self.wallclock_limit = wallclock_limit
         self.random_state = random_sate
@@ -197,6 +194,7 @@ class SMACOptimizer(AbstractOptimizer):
                                    n_jobs=n_workers,
                                    rng=self.random_state
                                    )
+        print(self.cs)
         self.smac.optimize()
 
         return self.smac

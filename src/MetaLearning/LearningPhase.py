@@ -20,7 +20,7 @@ from Utils import Helper
 from Utils.Helper import mf_set_to_string
 
 # TODO: How to fix the path issue? Path depends from where your working directory is ...
-mkr_path = Path("../MetaKnowledgeRepository")
+mkr_path = Path("/home/tschecds/automlclustering/src/MetaKnowledgeRepository")
 
 evaluated_configs_filename = "evaluated_configs.csv"
 optimal_cvi_file_name = "optimal_cvi.csv"
@@ -36,6 +36,9 @@ true_labels = [y for X, y in different_shape_sets.values()]
 
 # define random seed
 np.random.seed(1234)
+dataset_types = DataGeneration.DATASET_TYPES
+n_loops = 100
+time_limit = 120 * 60
 
 
 def get_best_cvi_for_dataset(meta_knowledge, dataset, n_top_results=None):
@@ -140,7 +143,8 @@ def train_classifier(classifier=RandomForestClassifier):
         for dataset in optimal_cvi["dataset"].unique():
             # Train a classification model for each dataset --> This simulates the dataset that we use in the
             # application phase
-            train_model_not_for_dataset(dataset, mf_set, name_meta_feature_set, optimal_cvi, prediction_cols, classifier)
+            train_model_not_for_dataset(dataset, mf_set, name_meta_feature_set, optimal_cvi, prediction_cols,
+                                        classifier)
 
         # Train a model for all datasets
         # We use this for "new" application phases
@@ -241,7 +245,7 @@ if __name__ == '__main__':
     # Use this meta-feature set
     mf_set: list[str] = ["statistical", "info-theory", "general"]
 
-    #for mf_set in MetaFeatureExtractor.meta_feature_sets:
+    # for mf_set in MetaFeatureExtractor.meta_feature_sets:
     # Run the learning phase
     run_learning_phase(mf_set=mf_set, n_loops=n_loops,
                        datasets=datasets, dataset_names=d_names, labels=true_labels)

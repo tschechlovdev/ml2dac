@@ -82,12 +82,6 @@ def removekey(d, key):
 
 MAX_ITERATIONS = 100
 
-PCA_DR = "PCA"
-n_components = (2, 100)
-FAST_ICA = "FastICA"
-FACTOR_ANALYSIS = "FactorAnalysis"
-TSNE = "TSNE"
-
 KMEANS_ALGORITHM = "KMeans"
 GMM_ALGORITHM = "GMM"
 # KMEDOIDS = "KMedoids"
@@ -108,86 +102,88 @@ algorithms = [KMEANS_ALGORITHM, GMM_ALGORITHM,
               AFFINITY_PROPAGATION_ALGORITHM
               ]
 
-k_range = (2, 200)
-# For real-world data
-#k_range = (2, 100)
-
-min_samples_range = (2, 200)
-eps_range = (0.1, 1)
-quantile_range = (0, 1.0)
-damping_range = (0.5, 0.99)
-
 n_clusters_algorithms = [KMEANS_ALGORITHM, MINI_BATCH_KMEANS, GMM_ALGORITHM,
                          SPECTRAL_ALGORITHM,
                          BIRCH_ALGORITHM,
                          WARD_ALGORITHM]
 
-eps_hyperparameter = UniformFloatHyperparameter("eps", lower=eps_range[0],
-                                                upper=eps_range[1], q=0.01)
 
-quantile_hyperparameter = UniformFloatHyperparameter("quantile", lower=quantile_range[0],
-                                                     upper=quantile_range[1], q=0.01)
+def get_ALGORITHMS_MAP(k_range=None):
+    # For real-world data
+    if k_range is None:
+        k_range = (2, 200)
+    # k_range = (2, 100)
 
-damping_hyperparameter = UniformFloatHyperparameter("damping", lower=damping_range[0],
-                                                    upper=damping_range[1], q=0.01)
+    min_samples_range = (2, 200)
+    eps_range = (0.1, 1)
+    quantile_range = (0, 1.0)
+    damping_range = (0.5, 0.99)
 
-min_samples_hyperparameter = UniformIntegerHyperparameter("min_samples", lower=min_samples_range[0],
-                                                          upper=min_samples_range[1])
+    eps_hyperparameter = UniformFloatHyperparameter("eps", lower=eps_range[0], upper=eps_range[1],
+                                                    q=0.01)
 
-n_clusters_hyperparameter = UniformIntegerHyperparameter("n_clusters", lower=k_range[0],
-                                                         upper=k_range[1], default_value=k_range[0])
+    quantile_hyperparameter = UniformFloatHyperparameter("quantile", lower=quantile_range[0],
+                                                         upper=quantile_range[1], q=0.01)
 
-n_components_hyperparameter = UniformIntegerHyperparameter("n_components", lower=k_range[0],
-                                                           upper=k_range[1], default_value=k_range[0])
+    damping_hyperparameter = UniformFloatHyperparameter("damping", lower=damping_range[0],
+                                                        upper=damping_range[1], q=0.01)
 
-ALL_PARAMETERS = [eps_hyperparameter, min_samples_hyperparameter, quantile_hyperparameter,
-                  damping_hyperparameter]
+    min_samples_hyperparameter = UniformIntegerHyperparameter("min_samples", lower=min_samples_range[0],
+                                                              upper=min_samples_range[1])
 
-################ Definition of algorithms and their hyperparameters #################################################
-### todo: maybe adjust additional kwargs
-ALGORITHMS_MAP = {KMEANS_ALGORITHM: ClusteringAlgorithm(name=KMEANS_ALGORITHM, algorithm_class=KMeans,
-                                                        parameters=[n_clusters_hyperparameter],
-                                                        additional_kwargs={"n_init": 1, "max_iter": MAX_ITERATIONS,
-                                                                           "random_state": 1234}),
-                  GMM_ALGORITHM: ClusteringAlgorithm(name=GMM_ALGORITHM, algorithm_class=GaussianMixture,
-                                                     parameters=[n_clusters_hyperparameter],
-                                                     additional_kwargs={"n_init": 1, "max_iter": MAX_ITERATIONS}),
-                  MINI_BATCH_KMEANS: ClusteringAlgorithm(name=MINI_BATCH_KMEANS, algorithm_class=MiniBatchKMeans,
-                                                         parameters=[n_clusters_hyperparameter],
-                                                         additional_kwargs={"n_init": 1, "max_iter": MAX_ITERATIONS,
-                                                                            "random_state": 1234}),
-                  WARD_ALGORITHM: ClusteringAlgorithm(name=WARD_ALGORITHM, algorithm_class=AgglomerativeClustering,
-                                                      parameters=[n_clusters_hyperparameter]),
-                  BIRCH_ALGORITHM: ClusteringAlgorithm(name=BIRCH_ALGORITHM, algorithm_class=Birch,
-                                                       parameters=[n_clusters_hyperparameter]),
-                  SPECTRAL_ALGORITHM: ClusteringAlgorithm(name=SPECTRAL_ALGORITHM, algorithm_class=SpectralClustering,
-                                                          parameters=[n_clusters_hyperparameter],
-                                                       additional_kwargs={"n_init": 1,"random_state": 1234
-                                                                             # "n_jobs": -1
-                                                                             }),
-                  DBSCAN_ALGORITHM: ClusteringAlgorithm(name=DBSCAN_ALGORITHM, algorithm_class=DBSCAN,
-                                                        parameters=[eps_hyperparameter, min_samples_hyperparameter],
-                                                        # additional_kwargs={"n_jobs": -1}
-                                                        ),
-                  MEAN_SHIFT_ALGORITHM: ClusteringAlgorithm(name=MEAN_SHIFT_ALGORITHM, algorithm_class=MeanShift,
-                                                            parameters=[quantile_hyperparameter],
-                                                            additional_kwargs={"max_iter": MAX_ITERATIONS,
-                                                                               # "n_jobs": -1
-                                                                               }),
-                  AFFINITY_PROPAGATION_ALGORITHM: ClusteringAlgorithm(name=AFFINITY_PROPAGATION_ALGORITHM,
-                                                                      algorithm_class=AffinityPropagation,
-                                                                      parameters=[damping_hyperparameter],
-                                                                      additional_kwargs={"max_iter": MAX_ITERATIONS,
-                                                                                         "random_state": 1234}),
-                  }
+    n_clusters_hyperparameter = UniformIntegerHyperparameter("n_clusters", lower=k_range[0],
+                                                             upper=k_range[1], default_value=k_range[0])
+
+    ALL_PARAMETERS = [eps_hyperparameter, min_samples_hyperparameter, quantile_hyperparameter,
+                      damping_hyperparameter]
+
+    ################ Definition of algorithms and their hyperparameters #################################################
+    ### todo: maybe adjust additional kwargs
+    return {KMEANS_ALGORITHM: ClusteringAlgorithm(name=KMEANS_ALGORITHM, algorithm_class=KMeans,
+                                                  parameters=[n_clusters_hyperparameter],
+                                                  additional_kwargs={"n_init": 1, "max_iter": MAX_ITERATIONS,
+                                                                     "random_state": 1234}),
+            GMM_ALGORITHM: ClusteringAlgorithm(name=GMM_ALGORITHM, algorithm_class=GaussianMixture,
+                                               parameters=[n_clusters_hyperparameter],
+                                               additional_kwargs={"n_init": 1, "max_iter": MAX_ITERATIONS}),
+            MINI_BATCH_KMEANS: ClusteringAlgorithm(name=MINI_BATCH_KMEANS, algorithm_class=MiniBatchKMeans,
+                                                   parameters=[n_clusters_hyperparameter],
+                                                   additional_kwargs={"n_init": 1, "max_iter": MAX_ITERATIONS,
+                                                                      "random_state": 1234}),
+            WARD_ALGORITHM: ClusteringAlgorithm(name=WARD_ALGORITHM, algorithm_class=AgglomerativeClustering,
+                                                parameters=[n_clusters_hyperparameter]),
+            BIRCH_ALGORITHM: ClusteringAlgorithm(name=BIRCH_ALGORITHM, algorithm_class=Birch,
+                                                 parameters=[n_clusters_hyperparameter]),
+            SPECTRAL_ALGORITHM: ClusteringAlgorithm(name=SPECTRAL_ALGORITHM,
+                                                    algorithm_class=SpectralClustering,
+                                                    parameters=[n_clusters_hyperparameter],
+                                                    additional_kwargs={"n_init": 1, "random_state": 1234
+                                                                       # "n_jobs": -1
+                                                                       }),
+            DBSCAN_ALGORITHM: ClusteringAlgorithm(name=DBSCAN_ALGORITHM, algorithm_class=DBSCAN,
+                                                  parameters=[eps_hyperparameter, min_samples_hyperparameter],
+                                                  # additional_kwargs={"n_jobs": -1}
+                                                  ),
+            MEAN_SHIFT_ALGORITHM: ClusteringAlgorithm(name=MEAN_SHIFT_ALGORITHM, algorithm_class=MeanShift,
+                                                      parameters=[quantile_hyperparameter],
+                                                      additional_kwargs={"max_iter": MAX_ITERATIONS,
+                                                                         # "n_jobs": -1
+                                                                         }),
+            AFFINITY_PROPAGATION_ALGORITHM: ClusteringAlgorithm(name=AFFINITY_PROPAGATION_ALGORITHM,
+                                                                algorithm_class=AffinityPropagation,
+                                                                parameters=[damping_hyperparameter],
+                                                                additional_kwargs={"max_iter": MAX_ITERATIONS,
+                                                                                   "random_state": 1234}),
+            }
 
 
-def build_paramter_space_per_algorithm(algorithms=algorithms):
+def build_paramter_space_per_algorithm(algorithms=algorithms, k_range=None):
     """
 
     :param algorithm_map:
     :return: configuration space for each algorithm in a map, where key is the name of the algorithm
     """
+    ALGORITHMS_MAP = get_ALGORITHMS_MAP(k_range)
     cs_per_algo = {}
     for algo_name in algorithms:
         algo = ALGORITHMS_MAP[algo_name]
@@ -225,7 +221,7 @@ def build_all_algos_space(n_samples=None, n_features=None):
 
 
 def build_config_space(clustering_algorithms=algorithms,
-                       partitional=False):
+                       partitional=False, k_range=None):
     """
     Builds configuration space of algorithms and their hyperparameters.
     Uses the algorithms from the algorithms list of clustering_algorithms is not provided.
@@ -242,6 +238,7 @@ def build_config_space(clustering_algorithms=algorithms,
     :return: ConfigurationSpace object that describes the config space with the algorithms and their default parameters.
     """
     cs = ConfigurationSpace()
+    ALGORITHMS_MAP = get_ALGORITHMS_MAP(k_range)
 
     if clustering_algorithms:
         algorithm_hyperparameter = CategoricalHyperparameter("algorithm", choices=clustering_algorithms,
@@ -252,11 +249,12 @@ def build_config_space(clustering_algorithms=algorithms,
         for algorithm in clustering_algorithms:
             params = ALGORITHMS_MAP[algorithm].parameters
             for param in params:
-                if param.name == n_clusters_hyperparameter.name:
+                if param.name == "n_clusters":
                     continue
                 cs.add_hyperparameter(param)
                 cs.add_condition(InCondition(param, algorithm_hyperparameter, [algorithm]))
 
+        n_clusters_hyperparameter = ALGORITHMS_MAP[KMEANS_ALGORITHM].parameters[0]
         # add n_clusters hyperparameter separately
         cs.add_hyperparameter(n_clusters_hyperparameter, )
         if not partitional:
@@ -275,5 +273,6 @@ PARTITIONAL_SPACE = "partitional"
 KMEANS_SPACE = "kmeans"
 ALL_ALGOS_SPACE = "all_algos"
 
-CONFIG_SPACE_MAPPING = {PARTITIONAL_SPACE: build_partitional_config_space(), KMEANS_SPACE: build_kmeans_space(),
-                        ALL_ALGOS_SPACE: build_all_algos_space()}
+# CONFIG_SPACE_MAPPING = {PARTITIONAL_SPACE: build_partitional_config_space(),
+#                        KMEANS_SPACE: build_kmeans_space(),
+#                        ALL_ALGOS_SPACE: build_all_algos_space()}

@@ -20,7 +20,8 @@ Directory:
   add more indices in the `CVIHandler.py` file.
 - "Examples/": Contains an example python Notebook that shows how to use our approach.
 - "Experiments/": Contains the code for running our experiments from our paper. It also contains the code for
-  synthetically generating the data that we use.
+  synthetically generating the data that we use. The folder is further split into synthetic and real-world experiments.
+  The implementations for the baselines are contained in the respective experiments folder.
 - "MetaLearning": Contains the code for our learning phase (`LearningPhase.py`) and our application
   phase (`ApplicationPhase.py`). Further, it contains a script ``MetaFeatureExtractor.py`` that implements some of the
   metafeatures and uses the pymfe library to extract various sets of metafeatures.
@@ -32,8 +33,6 @@ Directory:
 - "Optimizer/": We implement different optimizers for clustering in this module using the SMAC library. For our
   evaluation, we rely on Bayesian optimization as it is a model-based optimizer and thus benefits from the warmstarting
   configurations.
-- "RelatedWork/": Implements the approaches from related work that we use as comparison for our approach. That is,
-  AutoML4Clust (AML4C), AutoClust, and AutoCluster.
 - "Utils/": Contains several utility functions.
 
 Furthermore, we provide the results of our evaluation (Section 7) as CSV files in the folder 
