@@ -1,5 +1,6 @@
 import ast
 import os
+import pdb
 import shutil
 import sys
 import warnings
@@ -67,17 +68,18 @@ def process_result_to_dataframe(optimizer_result, additional_info, true_labels):
     return optimizer_result_df
 
 
-if __name__ == '__main__':
-    # Import parameters for our experiments
-    limit_cs = True
-    cvi = "predict"
+def run_experiment(limit_cs = True, 
+        cvi = "predict",  
+        n_warmstarts = 25, 
+        n_loops=100, 
+        time_limit = 120 * 60,  
+        mf_sets = "", 
+        mkr_path_string="../../MetaKnowledgeRepository", 
+        result_folder="gen_results/evaluation_results/synthetic_data"):
+ # Import parameters for our experiments
 
-    ### These may be varied to speedup optimization
-    n_warmstarts = 25
-    n_loops = 100
-    time_limit = 120 * 60
-    mf_sets = ""  # Per default we run the two best from our paper (statistical+general and statistical+general+info)
-    mkr_path = LearningPhase.mkr_path
+    #mkr_path = LearningPhase.mkr_path
+    mkr_path = Path(mkr_path_string)
 
     # Flag whether to run the baselines or not
     run_baselines = False
@@ -87,7 +89,7 @@ if __name__ == '__main__':
     dataset_names = list(shape_sets.keys())
     true_labels = [dataset[1] for key, dataset in shape_sets.items()]
 
-    path_to_store_results = Path(f"gen_results/evaluation_results/synthetic_data")
+    path_to_store_results = Path(result_folder)
 
     # Todo: Flag whether to overwrite or not
     if not path_to_store_results.exists():
@@ -114,7 +116,7 @@ if __name__ == '__main__':
             cvi_prediction_results = pd.DataFrame()
 
         # Create ML2DAC instance
-        ML2DAC = ApplicationPhase(  # mkr_path=mkr_path,
+        ML2DAC = ApplicationPhase(  mkr_path=mkr_path,
             mf_set=mf_set)
         for dataset, ground_truth_labels, dataset_name in zip(datasets, true_labels, dataset_names):
             if "dataset" in evaluation_results.columns and len(
@@ -140,10 +142,11 @@ if __name__ == '__main__':
             optimizer_result_df = process_result_to_dataframe(optimizer_instance, additional_result_info,
                                                               ground_truth_labels)
             evaluation_results = pd.concat([evaluation_results, optimizer_result_df])
-
             # Store results for this meta-feature set
             evaluation_results.to_csv(path_to_store_results / f"results_{mf_set_string}.csv", index=False)
 
+
+           
             # Find out which CVI would be the optimal for this dataset
             optimal_cvis = pd.read_csv(mkr_path / LearningPhase.optimal_cvi_file_name)
             optimal_cvi = optimal_cvis[optimal_cvis["dataset"] == dataset_name]["cvi"].values[0]
@@ -172,3 +175,28 @@ if __name__ == '__main__':
 
         # AML4C
         AutoML4Clust.run_automl_four_clust()
+
+if __name__ == '__main__':
+   
+    limit_cs = True
+    cvi = "predict"
+
+    ### These may be varied to speedup optimization
+    n_warmstarts = 1
+    n_loops = 1
+    time_limit = 120 * 60
+    mf_sets = ""  # Per default we run the two best from our paper (statistical+general and statistical+general+info)
+    mkr_path = "../../MetaKnowledgeRepository"
+
+    # Flag whether to run the baselines or not
+    run_baselines = False
+
+
+    run_experiment(limit_cs = limit_cs, 
+        cvi = cvi,  
+        n_warmstarts = n_warmstarts,
+        n_loops=n_loops, 
+        time_limit = time_limit,  
+        mf_sets = mf_sets, 
+        mkr_path_string=mkr_path, 
+        result_folder= "gen_results/evaluation_results/synthetic_data")

@@ -95,9 +95,9 @@ for data_name in dataset_names:
 
 
 df_train, df_test = train_test_split(df, stratify=df[["type", "k", "noise"]], train_size=0.8)
-print(df_train)
-print(df_test)
-
-print(df_train[df_train["type"]!= "gaussian"])
-
-print(len(df_train[df_train["type"]!= "gaussian"]))
+#print(df_train)
+#print(df_test)
+#
+#print(df_train[df_train["type"]!= "gaussian"])
+#
+#print(len(df_train[df_train["type"]!= "gaussian"]))

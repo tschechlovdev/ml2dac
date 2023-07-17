@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
 import os
 import shutil
 import warnings
@@ -13,31 +7,14 @@ import pandas as pd
 from pandas.core.common import SettingWithCopyWarning
 
 from ClusterValidityIndices import CVIHandler
-from MetaLearning import MetaFeatureExtractor
+from MetaLearning import LearningPhase, MetaFeatureExtractor
 from MetaLearning.ApplicationPhase import ApplicationPhase
 from Utils import Helper
 
 warnings.filterwarnings(category=RuntimeWarning, action="ignore")
 warnings.filterwarnings(category=SettingWithCopyWarning, action="ignore")
+from smac.tae import FirstRunCrashedException
 import numpy as np
-
-np.random.seed(0)
-# Specify where to find our MKR
-mkr_path = Path("src/MetaKnowledgeRepository/")
-
-mf_set = MetaFeatureExtractor.meta_feature_sets[2]
-
-real_world_path = "real_world_data/"
-path_to_store_results = Path("gen_results/evaluation_results/real_world/abl_study")
-files = [f for f in os.listdir(real_world_path) if os.path.isfile(real_world_path + f)]
-counter = 0
-print(files)
-print(counter)
-print(len(files))
-
-
-# In[2]:
-
 
 def compute_ari_values(optimizer_result_df, ground_truth_labels):
     return optimizer_result_df["labels"].apply(
@@ -46,10 +23,7 @@ def compute_ari_values(optimizer_result_df, ground_truth_labels):
     )
 
 
-# In[3]:
-
-
-def process_result_to_dataframe(optimizer_result, additional_info):
+def process_result_to_dataframe(optimizer_result, additional_info, y):
     selected_cvi = additional_info["cvi"]
     # The result of the application phase an optimizer instance that holds the history of executed
     # configurations with their runtime, cvi score, and so on.
@@ -84,32 +58,41 @@ def process_result_to_dataframe(optimizer_result, additional_info):
     return optimizer_result_df
 
 
-# In[4]:
-
-
 def clean_up_optimizer_directory(optimizer_instance):
     if os.path.exists(optimizer_instance.output_dir) and os.path.isdir(optimizer_instance.output_dir):
         shutil.rmtree(optimizer_instance.output_dir)
 
 
-# # Ablation Study
-
-# In[9]:
-
 
 # files_to_use = ["iris.csv","ecoli.csv","dermatology.csv", "zoo.csv",]
-from smac.tae import FirstRunCrashedException
 
-if __name__ == '__main__':
+def run_experiment(runs=10, 
+                    n_warmstarts = 50, 
+                    n_loops=100, 
+                    components=["all","no_algo_reduction","no_cvi_selection","no_warmstart"], 
+                    time_limit = 240 * 60):
+
+    np.random.seed(0)
+    # Specify where to find our MKR
+    mkr_path = LearningPhase.mkr_path
+
+    mf_set = MetaFeatureExtractor.meta_feature_sets[2]
+
+    real_world_path = "real_world_data/"
+    path_to_store_results = Path("gen_results/evaluation_results/real_world/abl_study")
+    files = [f for f in os.listdir(real_world_path) if os.path.isfile(real_world_path + f)]
+    counter = 0
+    print(files)
+    print(counter)
+    print(len(files))
     mf_sets_to_use = [  # MetaFeatureExtractor.meta_feature_sets[2], # "statistical"
         # MetaFeatureExtractor.meta_feature_sets[4], # ["statistical", "info-theory", "general"]
         MetaFeatureExtractor.meta_feature_sets[5],  # ["statistical", "general"] --> Best one in general comparison
         # MetaFeatureExtractor.meta_feature_sets[8] # "autocluster"
     ]
 
-    runs = 10
-    w = 50
-    n_loops = 100  # Number of optimizer loops. This is n_loops = n_warmstarts + x
+    w = n_warmstarts
+    #n_loops = 100  # Number of optimizer loops. This is n_loops = n_warmstarts + x
 
     for run in range(runs):
         print(mf_sets_to_use)
@@ -129,10 +112,7 @@ if __name__ == '__main__':
                 X = X.to_numpy()
                 y = y.to_numpy()
 
-                for component in ["all",
-                                  "no_algo_reduction",
-                                  "no_cvi_selection",
-                                  "no_warmstart"]:
+                for component in components:
                     print("---------------------------------")
                     print(f"Running component = {component}")
 
@@ -162,7 +142,7 @@ if __name__ == '__main__':
                         limit_cs = True
                         cvi = "predict"
 
-                    time_limit = 240 * 60  # Time limit of overall optimization --> Aborts earlier if n_loops not finished but time_limit reached
+                    #time_limit = 240 * 60  # Time limit of overall optimization --> Aborts earlier if n_loops not finished but time_limit reached
 
                     dataset_name = f
 
@@ -182,7 +162,7 @@ if __name__ == '__main__':
                                                                                                  dataset_name=dataset_name)
                         print(additional_info)
 
-                        optimizer_result_df = process_result_to_dataframe(optimizer_instance, additional_info)
+                        optimizer_result_df = process_result_to_dataframe(optimizer_instance, additional_info, y=y)
 
                         # Cleanup optimizer directory
                         clean_up_optimizer_directory(optimizer_instance)

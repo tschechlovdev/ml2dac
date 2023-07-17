@@ -79,217 +79,219 @@ def clean_up_optimizer_directory(optimizer_instance):
     if os.path.exists(optimizer_instance.output_dir) and os.path.isdir(optimizer_instance.output_dir):
         shutil.rmtree(optimizer_instance.output_dir)
 
+def run_experiment(n_warmstarts=25, n_loops=100, limit_cs=True, result_path="gen_results/evaluation_results/synthetic_data/vary_training_data"):
+    n_warmstarts = 25
+    n_loops = 100
+    limit_cs = True
+    result_path = Path(result_path)
 
-n_warmstarts = 25
-n_loops = 100
-limit_cs = True
-result_path = Path("gen_results/evaluation_results/synthetic_data/vary_training_data")
+    mf_set = MetaFeatureExtractor.meta_feature_sets[5]  # Mf-Set: Stats+General
 
-mf_set = MetaFeatureExtractor.meta_feature_sets[5]  # Mf-Set: Stats+General
+    shape_sets = generate_datasets()
 
-shape_sets = generate_datasets()
+    dataset_names = shape_sets.keys()
 
-dataset_names = shape_sets.keys()
+    df = pd.DataFrame()
+    for data_name in dataset_names:
+        characteristic_dict = {}
+        splits = data_name.split("-")
+        type = splits[0].split("=")[1]
+        k = splits[1].split("=")[1]
+        n = splits[2].split("=")[1]
+        f = splits[3].split("=")[1]
+        noise = splits[4].split("=")[1]
 
-df = pd.DataFrame()
-for data_name in dataset_names:
-    characteristic_dict = {}
-    splits = data_name.split("-")
-    type = splits[0].split("=")[1]
-    k = splits[1].split("=")[1]
-    n = splits[2].split("=")[1]
-    f = splits[3].split("=")[1]
-    noise = splits[4].split("=")[1]
+        characteristic_dict["dataset"] = data_name
+        characteristic_dict["type"] = type
+        characteristic_dict["k"] = k
+        characteristic_dict["n"] = n
+        characteristic_dict["f"] = f
+        characteristic_dict["noise"] = noise
 
-    characteristic_dict["dataset"] = data_name
-    characteristic_dict["type"] = type
-    characteristic_dict["k"] = k
-    characteristic_dict["n"] = n
-    characteristic_dict["f"] = f
-    characteristic_dict["noise"] = noise
+        df = df.append(characteristic_dict, ignore_index=True)
 
-    df = df.append(characteristic_dict, ignore_index=True)
+    df_train, df_test = train_test_split(df, stratify=df[["type", "k", "noise"]], train_size=0.8, random_state=1234)
+    print(df_train)
+    print(df_test)
 
-df_train, df_test = train_test_split(df, stratify=df[["type", "k", "noise"]], train_size=0.8, random_state=1234)
-print(df_train)
-print(df_test)
+    print(df_train[df_train["type"] != "gaussian"])
 
-print(df_train[df_train["type"] != "gaussian"])
+    print(len(df_train[df_train["type"] != "gaussian"]))
 
-print(len(df_train[df_train["type"] != "gaussian"]))
+    evaluated_configs = pd.read_csv(mkr_path / "evaluated_configs.csv")
 
-evaluated_configs = pd.read_csv(mkr_path / "evaluated_configs.csv")
+    evaluated_configs = evaluated_configs.drop("Unnamed: 0", axis=1)
+    print(evaluated_configs)
 
-evaluated_configs = evaluated_configs.drop("Unnamed: 0", axis=1)
-print(evaluated_configs)
+    test_data = df_test.iloc[0]
+    runs = 1
 
-test_data = df_test.iloc[0]
-runs = 1
+    for run in range(runs):
+        random_seed = (runs + 1) * 1234
+        for i in range(len(df_test)):
+            test_data = df_test.iloc[i]
+            dataset_name = test_data["dataset"]
+            additional_result_info = {"dataset": dataset_name}
 
-for run in range(runs):
-    random_seed = (runs + 1) * 1234
-    for i in range(len(df_test)):
-        test_data = df_test.iloc[i]
-        dataset_name = test_data["dataset"]
-        additional_result_info = {"dataset": dataset_name}
+            test_X, test_y = shape_sets[dataset_name]
 
-        test_X, test_y = shape_sets[dataset_name]
+            test_type = test_data["type"]
 
-        test_type = test_data["type"]
+            # Set training set by leaving out the same family
+            # selected_training_data_df = df_train[df_train["type"] != test_type]
+            selected_training_data_df = df_train
 
-        # Set training set by leaving out the same family
-        # selected_training_data_df = df_train[df_train["type"] != test_type]
-        selected_training_data_df = df_train
+            selected_training_data_df = selected_training_data_df.reset_index()
+            selected_training_data_df = selected_training_data_df.drop("index", axis=1)
 
-        selected_training_data_df = selected_training_data_df.reset_index()
-        selected_training_data_df = selected_training_data_df.drop("index", axis=1)
+            # If not using the same family
+            # training_datasets_df = df_train
 
-        # If not using the same family
-        # training_datasets_df = df_train
+            # Extract Meta-Features from test dataset
+            mf_names, mfs = extract_meta_features(shape_sets[dataset_name][0], mf_set)
+            mfs_test_dataset = mfs
 
-        # Extract Meta-Features from test dataset
-        mf_names, mfs = extract_meta_features(shape_sets[dataset_name][0], mf_set)
-        mfs_test_dataset = mfs
+            # Extract Meta-Features from training datasets
+            mfs_all_training_datasets = []
+            for X, name in zip([shape_sets[d_name][0] for d_name in selected_training_data_df["dataset"]],
+                            selected_training_data_df["dataset"].values):
+                print(f"extracting metafeatures {mf_set} from dataset {name}")
+                _, scores = extract_meta_features(X, mf_set)
+                mfs_all_training_datasets.append(scores)
 
-        # Extract Meta-Features from training datasets
-        mfs_all_training_datasets = []
-        for X, name in zip([shape_sets[d_name][0] for d_name in selected_training_data_df["dataset"]],
-                           selected_training_data_df["dataset"].values):
-            print(f"extracting metafeatures {mf_set} from dataset {name}")
-            _, scores = extract_meta_features(X, mf_set)
-            mfs_all_training_datasets.append(scores)
+            mfs_all_training_datasets = np.array(mfs_all_training_datasets)
 
-        mfs_all_training_datasets = np.array(mfs_all_training_datasets)
+            # Use these meta-features to define a distance
+            tree = KDTree(mfs_all_training_datasets)
+            dist, ind = tree.query(mfs_test_dataset.reshape(1, -1), k=len(mfs_all_training_datasets))
+            training_data_indices = ind[0]
+            dist = dist[0]
 
-        # Use these meta-features to define a distance
-        tree = KDTree(mfs_all_training_datasets)
-        dist, ind = tree.query(mfs_test_dataset.reshape(1, -1), k=len(mfs_all_training_datasets))
-        training_data_indices = ind[0]
-        dist = dist[0]
+            selected_training_data_df["distance"] = 0
+            selected_training_data_df["training_index"] = 0
 
-        selected_training_data_df["distance"] = 0
-        selected_training_data_df["training_index"] = 0
+            # Assign distance and training_index column to training_data
+            for dist_index, i in enumerate(training_data_indices):
+                selected_training_data_df.at[i, "distance"] = dist[dist_index]
+                selected_training_data_df.at[i, "training_index"] = i
 
-        # Assign distance and training_index column to training_data
-        for dist_index, i in enumerate(training_data_indices):
-            selected_training_data_df.at[i, "distance"] = dist[dist_index]
-            selected_training_data_df.at[i, "training_index"] = i
+            n_trainig_data_values = list(range(10, len(training_data_indices), 5))
+            if len(training_data_indices) not in n_trainig_data_values:
+                n_trainig_data_values.append(len(training_data_indices))
+            n_trainig_data_values = list(range(2, 65, 10))
 
-        n_trainig_data_values = list(range(10, len(training_data_indices), 5))
-        if len(training_data_indices) not in n_trainig_data_values:
-            n_trainig_data_values.append(len(training_data_indices))
-        n_trainig_data_values = list(range(2, 65, 10))
+            for n_training in n_trainig_data_values:
+                print(f"Running with #training data = {n_training}")
+                file_name = dataset_name + ".csv"
+                path = result_path / f"run_{run}" / f"n_training_data_{n_training}"
 
-        for n_training in n_trainig_data_values:
-            print(f"Running with #training data = {n_training}")
-            file_name = dataset_name + ".csv"
-            path = result_path / f"run_{run}" / f"n_training_data_{n_training}"
+                if not path.exists():
+                    path.mkdir(exist_ok=True, parents=True)
 
-            if not path.exists():
-                path.mkdir(exist_ok=True, parents=True)
+                if (path / file_name).is_file():
+                    print(f"Continue {n_training} for dataset {dataset_name}")
+                    print("File already exists")
+                    print("------------------------------")
+                    continue
 
-            if (path / file_name).is_file():
-                print(f"Continue {n_training} for dataset {dataset_name}")
-                print("File already exists")
-                print("------------------------------")
-                continue
+                # Select training datasets to use
+                # --> n_training most-dissimilar datasets, i.e., with highest distance!
+                final_training_data = selected_training_data_df.sort_values("distance",
+                                                                            ascending=False).head(n_training)
+                print(final_training_data)
 
-            # Select training datasets to use
-            # --> n_training most-dissimilar datasets, i.e., with highest distance!
-            final_training_data = selected_training_data_df.sort_values("distance",
-                                                                        ascending=False).head(n_training)
-            print(final_training_data)
+                names_final_training_datasets = final_training_data["dataset"].unique()
 
-            names_final_training_datasets = final_training_data["dataset"].unique()
+                # Get training data from MKR --> Only use the available training data
+                EC_selected_training_data = evaluated_configs[
+                    evaluated_configs["dataset"].isin(names_final_training_datasets)]
 
-            # Get training data from MKR --> Only use the available training data
-            EC_selected_training_data = evaluated_configs[
-                evaluated_configs["dataset"].isin(names_final_training_datasets)]
+                # Get class labels for RandomForest Model (Best CVI for each dataset)
+                optimal_cvi_per_dataset = pd.read_csv(mkr_path / optimal_cvi_file_name)
+                optimal_cvi_per_dataset = optimal_cvi_per_dataset.drop("Unnamed: 0", axis=1)
 
-            # Get class labels for RandomForest Model (Best CVI for each dataset)
-            optimal_cvi_per_dataset = pd.read_csv(mkr_path / optimal_cvi_file_name)
-            optimal_cvi_per_dataset = optimal_cvi_per_dataset.drop("Unnamed: 0", axis=1)
+                optimal_cvi_per_dataset = optimal_cvi_per_dataset[optimal_cvi_per_dataset["dataset"].isin(
+                    names_final_training_datasets)
+                ]
 
-            optimal_cvi_per_dataset = optimal_cvi_per_dataset[optimal_cvi_per_dataset["dataset"].isin(
-                names_final_training_datasets)
-            ]
+                optimal_cvi_per_dataset["dataset"] = pd.Categorical(optimal_cvi_per_dataset["dataset"],
+                                                                    categories=names_final_training_datasets,
+                                                                    ordered=True
+                                                                    )
 
-            optimal_cvi_per_dataset["dataset"] = pd.Categorical(optimal_cvi_per_dataset["dataset"],
-                                                                categories=names_final_training_datasets,
-                                                                ordered=True
-                                                                )
+                optimal_cvi_per_dataset = optimal_cvi_per_dataset.sort_values("dataset")
 
-            optimal_cvi_per_dataset = optimal_cvi_per_dataset.sort_values("dataset")
+                for opt_cvi_d, final_train_d in zip(optimal_cvi_per_dataset["dataset"],
+                                                    names_final_training_datasets):
+                    print(opt_cvi_d)
+                    print(final_train_d)
+                    assert opt_cvi_d == final_train_d
 
-            for opt_cvi_d, final_train_d in zip(optimal_cvi_per_dataset["dataset"],
-                                                names_final_training_datasets):
-                print(opt_cvi_d)
-                print(final_train_d)
-                assert opt_cvi_d == final_train_d
+                # Train classifier for training dataset
+                mf_X = mfs_all_training_datasets[final_training_data["training_index"]]
+                cvi_y = optimal_cvi_per_dataset["cvi"]
+                cvi_classifier = RandomForestClassifier(random_state=random_seed)
+                cvi_classifier.fit(mf_X, cvi_y)
 
-            # Train classifier for training dataset
-            mf_X = mfs_all_training_datasets[final_training_data["training_index"]]
-            cvi_y = optimal_cvi_per_dataset["cvi"]
-            cvi_classifier = RandomForestClassifier(random_state=random_seed)
-            cvi_classifier.fit(mf_X, cvi_y)
+                ### (a1) find similar dataset ###
 
-            ### (a1) find similar dataset ###
+                d_s = final_training_data.loc[
+                    final_training_data["distance"].idxmin(), "dataset"]
+                additional_result_info["similar dataset"] = [d_s]
 
-            d_s = final_training_data.loc[
-                final_training_data["distance"].idxmin(), "dataset"]
-            additional_result_info["similar dataset"] = [d_s]
+                ### (a2) select cluster validity index ###
+                predicted_cvi = cvi_classifier.predict(mfs_test_dataset.reshape(1, -1))[0]
+                additional_result_info["cvi"] = predicted_cvi
+                predicted_cvi = CVICollection.get_cvi_by_abbrev(predicted_cvi)
 
-            ### (a2) select cluster validity index ###
-            predicted_cvi = cvi_classifier.predict(mfs_test_dataset.reshape(1, -1))[0]
-            additional_result_info["cvi"] = predicted_cvi
-            predicted_cvi = CVICollection.get_cvi_by_abbrev(predicted_cvi)
+                print(predicted_cvi)
 
-            print(predicted_cvi)
+                # Configs from most-similar data
+                EC_s = EC_selected_training_data[EC_selected_training_data["dataset"] == d_s]
 
-            # Configs from most-similar data
-            EC_s = EC_selected_training_data[EC_selected_training_data["dataset"] == d_s]
+                ARI_s = EC_s[["config", "ARI"]]
+                print(ARI_s)
+                ARI_s = ApplicationPhase._remove_duplicates_from_ARI_s(ARI_s)
 
-            ARI_s = EC_s[["config", "ARI"]]
-            print(ARI_s)
-            ARI_s = ApplicationPhase._remove_duplicates_from_ARI_s(ARI_s)
+                ### (a3) select warmstart configurations ###
+                warmstart_configs = ApplicationPhase.select_warmstart_configurations(ARI_s, n_warmstarts=n_warmstarts)
 
-            ### (a3) select warmstart configurations ###
-            warmstart_configs = ApplicationPhase.select_warmstart_configurations(ARI_s, n_warmstarts=n_warmstarts)
+                ### (a4) definition of configurations space (dependent on warmstart configurations) ###
 
-            ### (a4) definition of configurations space (dependent on warmstart configurations) ###
-            cs, algorithms = ApplicationPhase.define_config_space(warmstart_configs, limit_cs=limit_cs)
-            if n_warmstarts > 0:
-                # update warmstart configurations
-                warmstart_configs = warmstart_configs["config"]
-                warmstart_configs = [ast.literal_eval(config_string) for config_string in warmstart_configs]
-                warmstart_configs = [Configuration(cs, config_dict) for config_dict in warmstart_configs]
+                ap = ApplicationPhase(k_range=(2,200))
+                cs, algorithms = ap.define_config_space(warmstart_configs, limit_cs=limit_cs)
+                if n_warmstarts > 0:
+                    # update warmstart configurations
+                    warmstart_configs = warmstart_configs["config"]
+                    warmstart_configs = [ast.literal_eval(config_string) for config_string in warmstart_configs]
+                    warmstart_configs = [Configuration(cs, config_dict) for config_dict in warmstart_configs]
 
-            additional_result_info["algorithms"] = algorithms
-            print(f"selected algorithms: {algorithms}")
-            print("--")
+                additional_result_info["algorithms"] = algorithms
+                print(f"selected algorithms: {algorithms}")
+                print("--")
 
-            ### (a5) optimizer loop ###
-            print("----------------------------------")
-            print("starting the optimization")
+                ### (a5) optimizer loop ###
+                print("----------------------------------")
+                print("starting the optimization")
 
-            opt_instance = SMACOptimizer(dataset=test_X,
-                                         true_labels=None,  # we do not have access to them in the application phase
-                                         cvi=predicted_cvi,
-                                         n_loops=n_loops,
-                                         cs=cs,
-                                         wallclock_limit=240 * 60,
+                opt_instance = SMACOptimizer(dataset=test_X,
+                                            true_labels=None,  # we do not have access to them in the application phase
+                                            cvi=predicted_cvi,
+                                            n_loops=n_loops,
+                                            cs=cs,
+                                            wallclock_limit=240 * 60,
 
-                                         )
+                                            )
 
-            opt_instance.optimize(initial_configs=warmstart_configs)
+                opt_instance.optimize(initial_configs=warmstart_configs)
 
-            optimizer_result_df = process_result_to_dataframe(opt_instance, additional_info=additional_result_info,
-                                                              ground_truth_clustering=test_y)
-            clean_up_optimizer_directory(opt_instance)
+                optimizer_result_df = process_result_to_dataframe(opt_instance, additional_info=additional_result_info,
+                                                                ground_truth_clustering=test_y)
+                clean_up_optimizer_directory(opt_instance)
 
-            optimizer_result_df.to_csv(path / file_name, index=False)
+                optimizer_result_df.to_csv(path / file_name, index=False)
 
-            print("----------------------------------")
-            print("finished optimization")
-            print(f"best obtained configuration is:")
-            print(opt_instance.get_incumbent())
+                print("----------------------------------")
+                print("finished optimization")
+                print(f"best obtained configuration is:")
+                print(opt_instance.get_incumbent())

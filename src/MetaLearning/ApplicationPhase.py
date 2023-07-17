@@ -131,7 +131,7 @@ class ApplicationPhase:
             return warmstart_configs
         else:
             return []
-
+    
     def define_config_space(self, warmstart_configs, limit_cs=True):
         if limit_cs:
             warmstart_configs["algorithm"] = ApplicationPhase._assign_algorithm_column(warmstart_configs)

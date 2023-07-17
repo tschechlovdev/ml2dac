@@ -26,16 +26,7 @@ from Utils import Helper
 warnings.filterwarnings(category=RuntimeWarning, action="ignore")
 warnings.filterwarnings(category=SettingWithCopyWarning, action="ignore")
 
-
-# In[ ]:
-
-# # AutoCluster
-
-# In[24]:
-
-# In[28]:
-
-def process_result_to_dataframe_autocluster(optimizer_result, additional_info):
+def process_result_to_dataframe_autocluster(optimizer_result, additional_info,y):
     selected_cvi = additional_info["cvi"]
     # The result of the application phase an optimizer instance that holds the history of executed
     # configurations with their runtime, cvi score, and so on.
@@ -66,12 +57,9 @@ def process_result_to_dataframe_autocluster(optimizer_result, additional_info):
     print(optimizer_result_df)
     return optimizer_result_df
 
-
-# In[21]:
 k_range = (2, 100)
 
-
-def run_autoCluster_for_dataset(X, y, d_name):
+def run_autoCluster_for_dataset(X, y, d_name, related_work_path, d_names, related_work_offline_result, cvi, n_loops):
     print(f"Using dataset to query: {d_name}")
     t0 = time.time()
     names, meta_features = MetaFeatureExtractor.extract_autocluster_mfes(X)
@@ -112,18 +100,13 @@ def run_autoCluster_for_dataset(X, y, d_name):
 
     return opt_instance
 
-
 def compute_ari_values(optimizer_result_df, ground_truth_labels):
     return optimizer_result_df["labels"].apply(
         lambda labels:
         CVIHandler.CVICollection.ADJUSTED_RAND.score_cvi(data=None, labels=labels, true_labels=ground_truth_labels)
     )
 
-
-# In[3]:
-
-
-def process_result_to_dataframe(optimizer_result, additional_info):
+def process_result_to_dataframe(optimizer_result, additional_info, y):
     selected_cvi = additional_info["cvi"]
     # The result of the application phase an optimizer instance that holds the history of executed
     # configurations with their runtime, cvi score, and so on.
@@ -159,7 +142,6 @@ def process_result_to_dataframe(optimizer_result, additional_info):
     return optimizer_result_df
 
 
-# In[4]:
 
 
 def clean_up_optimizer_directory(optimizer_instance):
@@ -167,7 +149,7 @@ def clean_up_optimizer_directory(optimizer_instance):
         shutil.rmtree(optimizer_instance.output_dir)
 
 
-def run_automl4clust():
+def run_automl4clust(X, n_loops, cvi, f, path_to_store_results, y, mkr_path):
     # AML4C
     n_warmstarts = 0  # Number of warmstart configurations (has to be smaller than n_loops)
     limit_cs = False  # Reduces the search space to suitable algorithms, dependening on warmstart configurations
@@ -183,7 +165,7 @@ def run_automl4clust():
                                                cvi=cvi, time_limit=time_limit,
                                                limit_cs=limit_cs,
                                                n_warmstarts=n_warmstarts,
-                                               dataset_name=f, mf_set="")
+                                               dataset_name=f, mf_set=mf_set,mkr_path=mkr_path, y=y)
         result_path = Path(path_to_store_results) / Path(cvi.get_abbrev())
 
         print(f"Storing result to {result_path}")
@@ -195,7 +177,7 @@ def run_automl4clust():
         print("---------------------------------")
 
 
-def run_our_approach(X, n_loops, n_warmstarts, limit_cs, cvi, time_limit, mf_set, dataset_name):
+def run_our_approach(X, n_loops, n_warmstarts, limit_cs, cvi, time_limit, mf_set, dataset_name, mkr_path, y):
     # Instantiate our approach
     ML2DAC = ApplicationPhase(mkr_path=mkr_path, mf_set=mf_set, k_range=k_range)
 
@@ -209,28 +191,26 @@ def run_our_approach(X, n_loops, n_warmstarts, limit_cs, cvi, time_limit, mf_set
                                                                              dataset_name=dataset_name,
                                                                              n_similar_datasets=1)
     print(additional_info)
-    optimizer_result_df = process_result_to_dataframe(optimizer_instance, additional_info)
+    optimizer_result_df = process_result_to_dataframe(optimizer_instance, additional_info, y)
     # Cleanup optimizer directory
     clean_up_optimizer_directory(optimizer_instance)
     return optimizer_result_df
 
-
-if __name__ == "__main__":
-
-    runs = 1
-    run_ml2dac = True
+def run_experiment(runs=1, run_ml2dac = True, run_baselines=True, n_warmstarts = 50, n_loops=100, time_limit=120*60, cvi="predict", limit_cs=True):
+    #runs = 1
+    #run_ml2dac = True
 
     # Do not run baselines to save time per default --> Change to False
-    run_baselines = True
+    #run_baselines = True
 
     # Reduce this to get faster results, but they will probably be less accurate!
-    n_warmstarts = 50  # Number of warmstart configurations (has to be smaller than n_loops)
-    n_loops = 100  # Number of optimizer loops. This is n_loops = n_warmstarts + x
-    time_limit = 120 * 60  # Time limit of overall optimization --> Aborts earlier if n_loops not finished but time_limit reached
-    cvi = "predict"  # We want to predict a cvi based on our meta-knowledge
+    #n_warmstarts = 50  # Number of warmstart configurations (has to be smaller than n_loops)
+    #n_loops = 100  # Number of optimizer loops. This is n_loops = n_warmstarts + x
+    #time_limit = 120 * 60  # Time limit of overall optimization --> Aborts earlier if n_loops not finished but time_limit reached
+    #cvi = "predict"  # We want to predict a cvi based on our meta-knowledge
 
     # other params
-    limit_cs = True  # Reduces the search space to suitable algorithms, depending on warmstart configurations
+    #limit_cs = True  # Reduces the search space to suitable algorithms, depending on warmstart configurations
 
     np.random.seed(0)
 
@@ -245,9 +225,8 @@ if __name__ == "__main__":
     print(files)
     print(len(files))
 
-    # # Our Approach (Warmstarts)
+    # Our Approach (Warmstarts)
 
-    # In[5]:
 
     mf_sets_to_use = [  # MetaFeatureExtractor.meta_feature_sets[2], # "statistical"
         MetaFeatureExtractor.meta_feature_sets[4],  # ["statistical", "info-theory", "general"]
@@ -281,12 +260,13 @@ if __name__ == "__main__":
                         result_path.mkdir(exist_ok=True, parents=True)
 
                     optimizer_result_df = run_our_approach(X, n_loops, n_warmstarts, limit_cs,
-                                                           cvi, time_limit, mf_set, f)
+                                                           cvi, time_limit, mf_set, f, mkr_path, y)
                     optimizer_result_df.to_csv(result_path / f, index=False)
 
     if run_baselines:
         ###########################################################################################
         ###################### AutoML4Clust ##########################################################
+        
         path_to_store_results = Path("gen_results/evaluation_results/real_world/Baselines/AML4C")
         for f in files:
             df = pd.read_csv(real_world_path + f)
@@ -301,12 +281,16 @@ if __name__ == "__main__":
             for cvi in [CVIHandler.CVICollection.DENSITY_BASED_VALIDATION,
                         CVIHandler.CVICollection.COP_SCORE]:
 
-                optimizer_result_df = run_our_approach(X=X, n_loops=n_loops,
-                                                       cvi=cvi, time_limit=time_limit,
-                                                       limit_cs=limit_cs,
+                optimizer_result_df = run_our_approach(X=X, 
+                                                       n_loops=n_loops,
+                                                       cvi=cvi,
                                                        n_warmstarts=n_warmstarts,
+                                                       limit_cs=limit_cs,
+                                                       time_limit=time_limit,
                                                        dataset_name=f,
-                                                       mf_set=mf_set)
+                                                       mkr_path=mkr_path,
+                                                       y=y, 
+                                                       mf_set= MetaFeatureExtractor.meta_feature_sets[4])
                 result_path = Path(path_to_store_results) / Path(cvi.get_abbrev())
 
                 print(f"Storing result to {result_path}")
@@ -316,13 +300,14 @@ if __name__ == "__main__":
                 optimizer_result_df.to_csv(result_path / f, index=False)
 
                 print("---------------------------------")
-
+        
         ###########################################################################################
         ###################### AutoClust ##########################################################
         # define random seed
+        
         np.random.seed(1234)
 
-        related_work_path = Path("src/Experiments/Synthetic_Data/RelatedWork/related_work")
+        related_work_path = Path("src/Experiments/RelatedWork/related_work")
         related_work_offline_result = pd.read_csv(related_work_path / 'related_work_offline_opt.csv',
                                                   index_col=None)
         print(related_work_offline_result.isna().sum())
@@ -352,11 +337,11 @@ if __name__ == "__main__":
             # additional_info = {"cvi": "MLP"}
             # autoclust_df = process_result_to_dataframe(autoclust_result, additional_info)
             autoclust_df.to_csv(result_file, index=False)
-
+        
         #####################################################
         ########### AutoCluster #############################
         path_to_store_results = Path("gen_results/evaluation_results/real_world/Baselines/AutoCluster")
-
+        related_work_path = Path("src/Experiments/RelatedWork/related_work")
         related_work_offline_result = pd.read_csv(related_work_path / 'related_work_offline_opt.csv',
                                                   index_col=None)
         print(related_work_offline_result.isna().sum())
@@ -384,10 +369,29 @@ if __name__ == "__main__":
                 if not result_path.exists():
                     result_path.mkdir(exist_ok=True, parents=True)
                 result_file = result_path / Path(f)
-                autocluster_result = run_autoCluster_for_dataset(X, y, f)
+                autocluster_result = run_autoCluster_for_dataset(X=X, 
+                                                                 y=y, 
+                                                                 d_name=f, 
+                                                                 related_work_path=related_work_path, 
+                                                                 d_names=d_names, 
+                                                                 related_work_offline_result=related_work_offline_result,
+                                                                 cvi=cvi,
+                                                                 n_loops=n_loops)
                 additional_info = {"cvi": cvi.get_abbrev()}
 
                 # autoclust_df.to_csv(result_file, index=False)
-                autocluster_cvi_df = process_result_to_dataframe_autocluster(autocluster_result, additional_info)
+                autocluster_cvi_df = process_result_to_dataframe_autocluster(autocluster_result, additional_info,y)
                 autocluster_cvi_df.to_csv(result_file, index=False)
                 clean_up_optimizer_directory(autocluster_result)
+
+if __name__ == "__main__":
+
+    runs = 1 #1
+    run_ml2dac = True
+    run_baselines=True
+    n_warmstarts = 1 #50
+    n_loops=1 #100
+    time_limit=120*60
+    cvi="predict"
+    limit_cs=True
+    run_experiment(runs=runs, run_ml2dac = run_ml2dac, run_baselines=run_baselines, n_warmstarts = n_warmstarts, n_loops=n_loops, time_limit=time_limit, cvi="predict", limit_cs=limit_cs)

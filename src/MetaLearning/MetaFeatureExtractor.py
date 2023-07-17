@@ -84,7 +84,7 @@ def extract_meta_features(dataset, mf_set):
         logging.error(f"Unknown mf set: {mf_set} - Return None")
         print(f"Unknown mf set: {mf_set} - Return None")
 
-        return None
+        return None,None
 
     # if there are still nan values we simply set them to 0
     metafeatures = np.nan_to_num(metafeatures)

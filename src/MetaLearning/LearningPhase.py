@@ -20,7 +20,8 @@ from Utils import Helper
 from Utils.Helper import mf_set_to_string
 
 # TODO: How to fix the path issue? Path depends from where your working directory is ...
-mkr_path = Path("/home/tschecds/automlclustering/src/MetaKnowledgeRepository")
+#mkr_path = Path("/home/tschecds/automlclustering/src/MetaKnowledgeRepository")
+mkr_path = Path("src/MetaKnowledgeRepository")
 
 evaluated_configs_filename = "evaluated_configs.csv"
 optimal_cvi_file_name = "optimal_cvi.csv"

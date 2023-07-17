@@ -10,7 +10,7 @@ from Experiments import DataGeneration
 from MetaLearning import LearningPhase
 from ClusterValidityIndices.CVIHandler import CVICollection
 from Optimizer.OptimizerSMAC import SMACOptimizer
-from AutoClust import related_work_path
+from .AutoClust import related_work_path
 
 # Parameters, can be changed to speedup optimization
 n_loops = LearningPhase.n_loops
