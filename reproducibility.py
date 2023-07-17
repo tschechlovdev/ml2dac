@@ -53,7 +53,7 @@ def main(only_figures='Default', experiments=['all'], loops=100, warmstarts=25, 
             print("Varying training data done")
         
 
-        if('All' in experiments or 'ablation' in experiments):
+        if('all' in experiments or 'ablation' in experiments):
             print('ablation Study')
             a_components =  ["all","no_algo_reduction","no_cvi_selection","no_warmstart"]
             a_time_limit = 240 * 60
@@ -65,7 +65,10 @@ def main(only_figures='Default', experiments=['all'], loops=100, warmstarts=25, 
             print('Ablation study done ')
     
     print('Plots and figures')
-    gen_figures()
+    fig_eval = 'all' in experiments or 'evaluation' in experiments
+    fig_real_world = 'all' in experiments or 'realworld' in experiments
+    fig_ablation='all' in experiments or 'ablation' in experiments
+    gen_figures(evaluation=fig_eval, real_world=fig_real_world, ablation=fig_ablation)
     print('Plots and figures done')
 
 
@@ -76,12 +79,8 @@ if __name__ == '__main__':
 
     #loops, warmstarts, runs
 
-    only_figures = os.getenv('ONLY_FIGURES', 'false').lower() == 'true'
-    only_figures = os.getenv('ONLY_FIGURES', 'true').lower() == 'true'
-    
+    only_figures = os.getenv('ONLY_FIGURES', 'false').lower() == 'true'    
     experiments = os.getenv('EXPERIMENTS', 'All').lower().split(',')
-
-
 
     loops = int(os.getenv('LOOPS', 100))
     warmstarts = int(os.getenv('WARMSTARTS', 25))
