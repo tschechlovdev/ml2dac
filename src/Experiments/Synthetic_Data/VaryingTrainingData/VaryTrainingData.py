@@ -257,7 +257,7 @@ for run in range(runs):
             warmstart_configs = ApplicationPhase.select_warmstart_configurations(ARI_s, n_warmstarts=n_warmstarts)
 
             ### (a4) definition of configurations space (dependent on warmstart configurations) ###
-            cs, algorithms = ApplicationPhase.define_config_space(warmstart_configs, limit_cs=limit_cs)
+            cs, algorithms = ApplicationPhase(k_range=(2,100)).define_config_space(warmstart_configs, limit_cs=limit_cs)
             if n_warmstarts > 0:
                 # update warmstart configurations
                 warmstart_configs = warmstart_configs["config"]
