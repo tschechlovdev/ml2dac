@@ -1,2 +1,0 @@
-{"cpu_time": 0.0, "wallclock_time": 0.0023241043090820312, "evaluations": 0, "cost": 2147483648.0, "incumbent": {"algorithm": "dbscan", "eps": 0.15000000000000002, "min_samples": 56}, "budget": 0, "origin": "Sobol"}
-{"cpu_time": 0.007241964340209961, "wallclock_time": 0.011750221252441406, "evaluations": 1, "cost": 101.8213, "incumbent": {"algorithm": "dbscan", "eps": 0.15000000000000002, "min_samples": 56}, "budget": 0, "origin": "Sobol"}

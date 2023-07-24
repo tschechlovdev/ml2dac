@@ -1,6 +1,0 @@
-algorithm categorical {dbscan} [dbscan]
-Q0_eps real [0.1, 1.0] [0.55]
-min_samples integer [2, 200] [101]
-
-eps | algorithm in {dbscan}
-min_samples | algorithm in {dbscan}
