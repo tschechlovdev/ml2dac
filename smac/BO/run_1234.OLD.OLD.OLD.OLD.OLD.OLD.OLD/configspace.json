@@ -1,0 +1,34 @@
+{
+  "hyperparameters": [
+    {
+      "name": "algorithm",
+      "type": "categorical",
+      "choices": [
+        "means_shift"
+      ],
+      "default": "means_shift",
+      "weights": null
+    },
+    {
+      "name": "quantile",
+      "type": "uniform_float",
+      "log": false,
+      "lower": 0.0,
+      "upper": 1.0,
+      "default": 0.5
+    }
+  ],
+  "conditions": [
+    {
+      "child": "quantile",
+      "parent": "algorithm",
+      "type": "IN",
+      "values": [
+        "means_shift"
+      ]
+    }
+  ],
+  "forbiddens": [],
+  "python_module_version": "0.6.0",
+  "json_format_version": 0.4
+}

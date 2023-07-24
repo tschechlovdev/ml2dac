@@ -45,7 +45,7 @@ def process_result_to_dataframe(optimizer_result, additional_info, true_labels):
             value = value[0]
         optimizer_result_df[key] = value
 
-    # optimizer_result_df = Helper.add_iteration_metric_wallclock_time(optimizer_result_df, selected_cvi)
+    #optimizer_result_df = Helper.add_iteration_metric_wallclock_time(optimizer_result_df, selected_cvi)
     optimizer_result_df["iteration"] = [i + 1 for i in range(len(optimizer_result_df))]
     optimizer_result_df['ARI'] = optimizer_result_df["labels"].apply(
         lambda labels:

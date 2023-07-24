@@ -1,0 +1,4 @@
+algorithm categorical {means_shift} [means_shift]
+Q0_quantile real [0.0, 1.0] [0.5]
+
+quantile | algorithm in {means_shift}

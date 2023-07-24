@@ -84,12 +84,11 @@ if __name__ == '__main__':
     #loops, warmstarts, runs
 
     only_figures = os.getenv('ONLY_FIGURES', 'false').lower() == 'true'    
-    only_figures = os.getenv('ONLY_FIGURES', 'true').lower() == 'true'    
     experiments = os.getenv('EXPERIMENTS', 'All').lower().split(',')
 
     loops = int(os.getenv('LOOPS', 100))
     warmstarts = int(os.getenv('WARMSTARTS', 25))
-    runs = int(os.getenv('RUNS', 10))
+    runs = int(os.getenv('RUNS', 1))
 
     print('###################################')
     print(f'only figures = {only_figures}')

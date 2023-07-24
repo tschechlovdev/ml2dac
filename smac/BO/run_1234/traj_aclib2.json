@@ -1,0 +1,1 @@
+{"cpu_time": 0.0, "wallclock_time": 0.0017070770263671875, "evaluations": 0, "cost": 2147483648.0, "incumbent": ["algorithm=''means_shift''", "quantile='0.05'"], "origin": "Sobol"}
