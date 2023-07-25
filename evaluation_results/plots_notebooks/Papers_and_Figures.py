@@ -97,7 +97,7 @@ def add_median_labels_2(ax):
         # ])
 
 
-def gen_figures(evaluation=False, real_world=False, ablation=False):
+def gen_figures(evaluation=False, real_world=False, ablation=False, varying_training_data=False):
     # Load Results for different Meta-Feature Sets (cf. Section 7.2)
     merged_results = pd.DataFrame()
     mfs = [
@@ -534,9 +534,11 @@ def gen_figures(evaluation=False, real_world=False, ablation=False):
 
 
     ############## Generate Table 4
-    import os
 
-    path = "evaluation_results/varying_training_data"
+    base_path = ''
+    if varying_training_data: 
+        path = 'gen_results/evaluation_results/varying_training_data/run_0/'
+    path = f"evaluation_results/varying_training_data"
     varying_training_data_results = pd.DataFrame()
     for n_train in list(range(2, 72, 10)):
         dataset_results = os.listdir(path + f"/n_training_data_{n_train}")

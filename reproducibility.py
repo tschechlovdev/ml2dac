@@ -67,7 +67,9 @@ def main(only_figures='Default', experiments=['all'], loops=100, warmstarts=25, 
     print('Plots and figures')
 
     if only_figures: 
-        gen_figures()
+        #gen_figures()
+        #Todo change
+        gen_figures(True, True, True, True)
     else:
         fig_eval = 'all' in experiments or 'evaluation' in experiments
         fig_real_world = 'all' in experiments or 'realworld' in experiments
@@ -78,12 +80,9 @@ def main(only_figures='Default', experiments=['all'], loops=100, warmstarts=25, 
 
 if __name__ == '__main__':
 
-    #mode -> default, figures, custom 
-    # array of experiments: ['All',,'most important= Eval, RealWorld ''Evaluation, RealWorld, VaryingTrainingData, Ablation']
-
-    #loops, warmstarts, runs
-
-    only_figures = os.getenv('ONLY_FIGURES', 'false').lower() == 'true'    
+    only_figures = os.getenv('ONLY_FIGURES', 'false').lower() == 'true'  
+    #Todo Remove 
+    only_figures = os.getenv('ONLY_FIGURES', 'True').lower() == 'true'    
     experiments = os.getenv('EXPERIMENTS', 'All').lower().split(',')
 
     loops = int(os.getenv('LOOPS', 100))
