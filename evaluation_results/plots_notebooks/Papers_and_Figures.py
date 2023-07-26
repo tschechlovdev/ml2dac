@@ -1,4 +1,5 @@
 import os
+import pdb
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -300,11 +301,20 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
     selcted_methods["Method"] = pd.Categorical(selcted_methods["Method"], ordered=True, categories=methods_to_use)
     filled_markers = ('o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 'd', 'P', 'X')
     selcted_methods = selcted_methods.reset_index()
-    ax = sns.lineplot(x="iteration", y="Best ARI", markevery=[0] + [x for x in range(4, 100, 5)] + [99], markers=True,
-                      style="Method",
-                      data=selcted_methods
-                      , hue="Method",
-                      )
+
+
+    if evaluation:
+        ax = sns.lineplot(x="iteration", y="Best ARI", markevery=[0] + [x for x in range(4, 100, 5)] + [99], markers=True,
+                        style="Method",
+                        data=selcted_methods
+                        , hue="Method",
+                        )
+    else: 
+        ax = sns.lineplot(x="iteration", y="ARI", markevery=[0] + [x for x in range(4, 100, 5)] + [99], markers=True,
+                        style="Method",
+                        data=selcted_methods
+                        , hue="Method",
+                        )
 
     ax.set_xticks([0] + list(range(10, 105, 10)))
     ax.set_xlabel(r"Optimizer Loop")
@@ -323,7 +333,7 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
     # plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
     plt.savefig("evaluation_results/output/Fig4_accuracy_average_baselines.pdf", bbox_inches='tight')
     # plt.show()
-    # plt.close()
+    plt.close()
 
     # Generate Figure 5 (a - d)
 
@@ -347,11 +357,13 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
         data = type_methods[(type_methods["iteration"] == 25)
             # & (type_methods["noise"] < 0.1)
         ]
-        avgs = data.groupby(['Method'])['Best ARI'].mean()
-        medians = data.groupby(['Method'])['Best ARI'].median()
+        ari_column = 'ARI'
+        if evaluation: ari_column = 'Best ARI'
+        avgs = data.groupby(['Method'])[ari_column].mean()
+        medians = data.groupby(['Method'])[ari_column].median()
         medians = medians.reset_index()
         medians["Method"] = pd.Categorical(medians["Method"], ordered=True, categories=methods_to_use)
-        medians = medians["Best ARI"].values
+        medians = medians[ari_column].values
         # medians = medians.sort_values("Method")
         print(medians)
 
@@ -359,7 +371,7 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
 
         ax = sns.boxplot(data=data,
                          x="Method",
-                         y="Best ARI",
+                         y=ari_column,
                          flierprops=flierprops,
                          )
 
@@ -450,8 +462,9 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
         for dataset in df["dataset"].unique():
             mask = (df["dataset"] == dataset)
             data_df = df[mask]
+            #max_iteration = data_df["max iteration"].max()
             max_iteration = data_df["iteration"].max()
-            # max_iteration = data_df["max iteration"].values[0]
+            #max_iteration = data_df["max iteration"].values[0]
             mask_2 = data_df["iteration"] <= max_iteration
             data_df = data_df[mask_2]
 
@@ -537,19 +550,20 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
 
     base_path = ''
     if varying_training_data: 
-        path = 'gen_results/evaluation_results/varying_training_data/run_0/'
-    path = f"evaluation_results/varying_training_data"
+        path = 'gen_results/evaluation_results/synthetic_data/vary_training_data/run_0/'
+    else:
+        path = f"evaluation_results/varying_training_data"
     varying_training_data_results = pd.DataFrame()
     for n_train in list(range(2, 72, 10)):
         dataset_results = os.listdir(path + f"/n_training_data_{n_train}")
         results = pd.concat(
             [pd.read_csv(path + f"/n_training_data_{n_train}" + f"/{data}") for data in dataset_results],
             ignore_index=True)
-        results["n_train"] = n_train
+        results["n_train"] = n_train * -1
         varying_training_data_results = pd.concat([varying_training_data_results, results], ignore_index=True)
 
     varying_training_data_results[varying_training_data_results["iteration"] == 100].groupby("n_train")[
-        "Best ARI"].mean().reset_index().transpose().to_csv("evaluation_results/output/Table4.csv")
+        "Best ARI"].mean().reset_index().apply(lambda x: x*-1).transpose().to_csv("evaluation_results/output/Table4.csv")
     ############### Real-World results (cf. Section 7.4)
 
     data_path = Path("real_world_data/")
@@ -567,6 +581,7 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
 
     ml2dac_mf_paths = [Path(x[0]) for x in os.walk(ml2dac_path)]
 
+    
     if real_world:
         aml4c_path = Path("gen_results/evaluation_results/real_world/Baselines/AML4C/")
     else:
@@ -579,10 +594,15 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
     else:
         autoclust_path = Path("evaluation_results/real_world/Baselines/AutoClust/")
 
-    if real_world:
-        autocluster_path = Path("gen_results/evaluation_results/real_world/Baselines/AutoCluster/MV")
-    else:
-        autocluster_path = Path("evaluation_results/real_world/Baselines/AutoCluster/MV")
+    #if real_world:
+        #autocluster_path = Path("gen_results/evaluation_results/real_world/Baselines/AutoCluster/MV")
+    #else:
+        #autocluster_path = Path("evaluation_results/real_world/Baselines/AutoCluster/MV")
+    
+    #autoclust_path = Path("evaluation_results/real_world/Baselines/AutoClust/")
+    
+    autocluster_path = Path("evaluation_results/real_world/Baselines/AutoCluster/MV")
+    
 
     method_paths = [autoclust_path, autocluster_path]
     method_paths.extend(aml4c_cvi_paths)
@@ -590,7 +610,7 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
 
     all_results = pd.DataFrame()
 
-    replacements = {"\\": "-", "/": "-", "-warmstarts": "", "..-": "", "real_world-": "", "Baselines-": "",
+    replacements = {"gen_results/":"","evaluation_results/":"","\\": "-", "/": "-", "-warmstarts": "", "..-": "", "real_world-": "", "Baselines-": "",
                     "statistical": "Stats",
                     "general": "General", "info-theory": "Info", "-similar_datasets": "",
                     "-n_similar_1": "",
@@ -615,6 +635,14 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
                 if len(df) > 0:
                     df["Method"] = method_name
                     df["dataset"] = data
+
+                    if "Best ARI" not in df.columns:
+                        df["Best CVI"] = df["metric score"].cummin()
+                        df["Best ARI"] = 0
+                        df.loc[df["iteration"] == 0, "Best ARI"] = df["ARI"].values[0]
+                        df["changed"] = df["Best CVI"].diff()
+                        df["Best ARI"] = df.apply(lambda x: x["ARI"] if x["changed"] > 0 else x["Best ARI"], axis=1)
+
                     df["Best ARI"] = df["Best ARI"] * -1
                     df["Best* ARI"] = df["Best ARI"].cummax()
                     df["ARI"] = df["ARI"] * -1
@@ -639,6 +667,7 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
     method_results = all_results[(all_results["Method"].isin(methods))]
 
     # Generate Figure 7
+    plt.close()
     plt.figure()
     iterations = list(range(0, 101, 5))
     iterations.append(1)
@@ -693,23 +722,22 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
 
     # Table 6 (Ablation Study)
     if ablation:
-        path_to_abl_study_results = Path("gen_results/real_world/abl_study/statistical+general/")
+        path_to_abl_study_results = Path("gen_results/evaluation_results/real_world/abl_study/statistical+general/")
     else:
         path_to_abl_study_results = Path("evaluation_results/ablation_study/statistical+general/")
 
     components = os.listdir(path_to_abl_study_results)
-    components
+    
 
-    warmstart = 50
+    warmstart = 25
     components = os.listdir(path_to_abl_study_results / f"warmstarts_{str(warmstart)}")
     runs = os.listdir(path_to_abl_study_results / f"warmstarts_{str(warmstart)}" / "all")
-    datasets = os.listdir(path_to_abl_study_results / f"warmstarts_50" / "all" / "run_1")
+    datasets = os.listdir(path_to_abl_study_results / f"warmstarts_{warmstart}" / "all" / "run_0")
     print(datasets)
 
     all_abl_results = pd.DataFrame()
-    warmstart = 50
     for component in components:
-        run = 1
+        run = 0
         for dataset in datasets:
             df = pd.read_csv(
                 path_to_abl_study_results / f"warmstarts_{str(warmstart)}" / component / f"run_{run}" / dataset)
@@ -731,14 +759,14 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
         if len(df) == 0:
             continue
         df["run"] = run
-        df["warmstarts"] = 50
+        df["warmstarts"] = 25
         df["component"] = "all"
         df["Best ARI*"] = df["Best ARI"].cummin()
         result_all_components = pd.concat([result_all_components, df])
 
     result_all_components[result_all_components["iteration"] == 100]["Best ARI"].mean() * -1
 
-    warmstart_result = all_abl_results[(all_abl_results["warmstarts"] == 50) & (all_abl_results["run"] == 1)
+    warmstart_result = all_abl_results[(all_abl_results["warmstarts"] == 25) & (all_abl_results["run"] == 0)
                                        & (all_abl_results["iteration"] == 100)
                                        & (~all_abl_results["dataset"].isin(["mnist-digits.csv", "mnist-fashion.csv",
                                                                             "handwritten-digits.csv"]))]
@@ -757,4 +785,4 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
 
 
 if __name__ == "__main__":
-    gen_figures(evaluation=True)
+    gen_figures(evaluation=True, real_world=True, ablation=True, varying_training_data=True)

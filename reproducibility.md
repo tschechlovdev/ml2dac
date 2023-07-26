@@ -2,7 +2,7 @@
 
 ## Hardware Requirements 
 
-* 16GB RAM
+* 32GB RAM
 * 8 CPU cores 
 * 10 GB Disk space
 
@@ -25,7 +25,6 @@ A docker installation is required, to install docker please follow these steps:
 ## Reproduce the Experiments 
 
 ### Build the Container
-
 
 First the docker images needs to be build. To do this, navigate into the root directory of the project and run:
 
