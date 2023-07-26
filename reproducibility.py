@@ -72,7 +72,9 @@ def main(only_figures='Default', experiments=['all'], loops=100, warmstarts=25, 
         fig_eval = 'all' in experiments or 'evaluation' in experiments
         fig_real_world = 'all' in experiments or 'realworld' in experiments
         fig_ablation='all' in experiments or 'ablation' in experiments
-        gen_figures(evaluation=fig_eval, real_world=fig_real_world, ablation=fig_ablation)
+        fig_vary='all' in experiments or 'varyingtrainingdata' in experiments
+        gen_figures(evaluation=fig_eval, real_world=fig_real_world, ablation=fig_ablation, varying_training_data=fig_vary)
+        
     print('Plots and figures done')
 
 

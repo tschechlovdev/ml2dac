@@ -553,7 +553,8 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
 
     base_path = ''
     if varying_training_data: 
-        path = 'gen_results/evaluation_results/synthetic_data/vary_training_data/run_0/'
+        #path = 'gen_results/evaluation_results/synthetic_data/vary_training_data/run_0/'
+        path = f"evaluation_results/varying_training_data"
     else:
         path = f"evaluation_results/varying_training_data"
     varying_training_data_results = pd.DataFrame()
@@ -593,7 +594,8 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
     aml4c_cvi_paths = [Path(x[0]) for x in os.walk(aml4c_path)]
 
     if real_world:
-        autoclust_path = Path("gen_results/evaluation_results/real_world/Baselines/AutoClust/")
+        #autoclust_path = Path("gen_results/evaluation_results/real_world/Baselines/AutoClust/")
+        autoclust_path = Path("evaluation_results/real_world/Baselines/AutoClust/")
     else:
         autoclust_path = Path("evaluation_results/real_world/Baselines/AutoClust/")
 
@@ -638,12 +640,6 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
 
                 df = pd.read_csv(data_path)
                 if len(df) > 0:
-                    # TODO: Remove - only because arrythmia (and others) not avaiable
-                    print(df)
-                    if "iteration" not in df.columns:
-                        print("iteration not in columns - continue!")
-                        continue
-
                     df["Method"] = method_name
                     df["dataset"] = data
 
@@ -751,7 +747,8 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
 
     # Table 6 (Ablation Study)
     if ablation:
-        path_to_abl_study_results = Path("gen_results/evaluation_results/real_world/abl_study/statistical+general/")
+        #path_to_abl_study_results = Path("gen_results/evaluation_results/real_world/abl_study/statistical+general/")
+        path_to_abl_study_results = Path("evaluation_results/ablation_study/statistical+general/")
     else:
         path_to_abl_study_results = Path("evaluation_results/ablation_study/statistical+general/")
 
