@@ -46,7 +46,7 @@ Whenever the container is run, a result path on the host machine has to be defin
 A default execution would look like the following: 
 
 ```
-docker run -v local/dir/output:/app/evaluation_results/output  ml2dac -d
+docker run -v local/dir/output:/app/evaluation_results/output  -d ml2dac
 ```
 
 In order to reduce runtime or only execute certain experiments, the following parameters are available: 
@@ -76,5 +76,5 @@ This parameter decides which experiments are executed. If all experiments should
 A full example which executes only the experiments RealWorld and Evaluation with the parameters *warmstarts=1*,*runs=1* and *loops=1* would look like: 
 
 ```
-docker run -e ONLY_FIGURES=false -e EXPERIMENTS=RealWorld,Evaluation -e WARMSTARTS=1 -e LOOPS=1 -e RUNS=1 -v local/dir/output:/app/evaluation_results/output  ml2dac -d
+docker run -e ONLY_FIGURES=false -e EXPERIMENTS=RealWorld,Evaluation -e WARMSTARTS=1 -e LOOPS=1 -e RUNS=1 -v local/dir/output:/app/evaluation_results/output  -d ml2dac
 ```
