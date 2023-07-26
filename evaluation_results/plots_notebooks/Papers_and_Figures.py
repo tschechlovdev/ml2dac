@@ -141,6 +141,9 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
         if evaluation and (mf == "statistical+info-theory+general" or mf == "statistical+general"):
             mf_df = pd.read_csv(f"gen_results/evaluation_results/synthetic_data/results_{mf}.csv")
         else:
+            import os
+            print(os.curdir)
+            print(os.listdir())
             mf_df = pd.read_csv(f"evaluation_results/synthetic_data/results_{mf}.csv")
             mf_df["Best ARI"] = mf_df["ARI"]
         # for x in ["_1", "_2", "_3"]:
@@ -618,7 +621,9 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
                     "-abl_study": "",
                     "_25": "",
                     "-all": "",
-                    "-warmstart_and_bo": ""}
+                    "-warmstart_and_bo": "",
+                    "evaluation_results-": "",
+                    "gen_results-": ""}
 
     for data in datasets:
         for method_path in method_paths:
@@ -633,9 +638,18 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
 
                 df = pd.read_csv(data_path)
                 if len(df) > 0:
+                    # TODO: Remove - only because arrythmia (and others) not avaiable
+                    print(df)
+                    if "iteration" not in df.columns:
+                        print("iteration not in columns - continue!")
+                        continue
+
                     df["Method"] = method_name
                     df["dataset"] = data
 
+                    df = df.sort_values("iteration", ascending=True)
+
+                    print(df.columns)
                     if "Best ARI" not in df.columns:
                         df["Best CVI"] = df["metric score"].cummin()
                         df["Best ARI"] = 0
@@ -643,16 +657,28 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
                         df["changed"] = df["Best CVI"].diff()
                         df["Best ARI"] = df.apply(lambda x: x["ARI"] if x["changed"] > 0 else x["Best ARI"], axis=1)
 
+                        # for i in range(0, df["iteration"].max() -1):
+                        #     best_ari_value = 0
+                        #     current_iter_row = df[df["iteration"] == i]
+                        #     next_iter_row = df[df["iteration"] == i+1]
+                        #
+                        #     df.loc[df["iteration"] == i, "Best ARI"] = df["ARI"].values[0]
+                        #
+                        #     if next_iter_row["Best CVI"] < current_iter_row["Best CVI"]:
+                        #         best_ari_value = next_iter_row["ARI"]
+                        #
+                        #     df.loc[df["iteration"] == i+1, "Best ARI"] = best_ari_value
+
+
                     df["Best ARI"] = df["Best ARI"] * -1
                     df["Best* ARI"] = df["Best ARI"].cummax()
                     df["ARI"] = df["ARI"] * -1
                     df["Ground-truth Best ARI"] = df["ARI"].cummax()
-                    all_results
+
                     all_results = pd.concat([all_results, df])
             else:
                 pass
         # autoclust_data_df = pd.read_csv(autoclust_path / data)
-    all_results = all_results.reset_index(drop=True)
 
     all_results = all_results.reset_index(drop=True)
     all_results["Method"].unique()
@@ -664,8 +690,11 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
                "AutoClust",
                "AutoCluster-MV",
                ]
+    print(all_results)
+    print(all_results["Method"].unique())
     method_results = all_results[(all_results["Method"].isin(methods))]
-
+    print(method_results)
+    #exit()
     # Generate Figure 7
     plt.close()
     plt.figure()
@@ -700,7 +729,7 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
                         # handles=handles[1:], labels=labels[1:]
                         )
     ax.axvline(x=51, c='black', linestyle="--", linewidth=1, label="Warmstart Configs")
-    ax.text(30, 75, "Warmstart Configurations")
+    ax.text(30, 55, "Warmstart Configurations")
 
     plt.savefig("evaluation_results/output/Fig7_real_world_data_accuracy_comparison.pdf", bbox_inches='tight')
 
@@ -785,4 +814,8 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
 
 
 if __name__ == "__main__":
-    gen_figures(evaluation=True, real_world=True, ablation=True, varying_training_data=True)
+    gen_figures(evaluation=True,
+                real_world=True,
+                ablation=True,
+                varying_training_data=True
+                )
