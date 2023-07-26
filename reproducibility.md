@@ -22,6 +22,11 @@ A docker installation is required, to install docker please follow these steps:
 * [macOS](https://docs.docker.com/desktop/install/mac-install/)
 * [Windows](https://docs.docker.com/desktop/install/windows-install/)
 
+
+Additionally, git and git-lfs need to be installed on the machine. 
+
+Please note, if the repository was cloned, switch to the reproducibility branch and perform `git lfs pull` to obtain all files. 
+
 ## Reproduce the Experiments 
 
 ### Build the Container
