@@ -165,8 +165,6 @@ def run_experiment(limit_cs = True,
                 shutil.rmtree(optimizer_instance.output_dir)
 
     if run_baselines:
-        # TODO: we should pass params here ...
-
         # AutoClust
         AutoClust.rw_run_online_phase()
 

@@ -110,7 +110,9 @@ def run_experiment(n_warmstarts=25, n_loops=100, limit_cs=True, result_path="gen
 
         df = df.append(characteristic_dict, ignore_index=True)
 
-    df_train, df_test = train_test_split(df, stratify=df[["type", "k", "noise"]], train_size=0.8, random_state=1234)
+    df_train, df_test = train_test_split(df,
+                                         stratify=df[["type", "k", "noise"]], train_size=0.8,
+                                         random_state=1234)
     print(df_train)
     print(df_test)
 
@@ -127,7 +129,7 @@ def run_experiment(n_warmstarts=25, n_loops=100, limit_cs=True, result_path="gen
     runs = 1
 
     for run in range(runs):
-        random_seed = (runs + 1) * 1234
+        random_seed = (run + 1) * 1234
         for i in range(len(df_test)):
             test_data = df_test.iloc[i]
             dataset_name = test_data["dataset"]
@@ -280,7 +282,6 @@ def run_experiment(n_warmstarts=25, n_loops=100, limit_cs=True, result_path="gen
                                             n_loops=n_loops,
                                             cs=cs,
                                             wallclock_limit=240 * 60,
-
                                             )
 
                 opt_instance.optimize(initial_configs=warmstart_configs)
