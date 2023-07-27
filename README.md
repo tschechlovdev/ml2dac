@@ -8,6 +8,11 @@ they obtain valuable clustering results in a short time frame. We use meta-learn
 index, (b)  select configurations in form of warmstart configurations efficiently, and (c) select suitable clustering
 algorithms.
 
+## Reproducibility
+
+For reproducing our experiments, please switch to the branch "reproducibility" and see the ``reproducibility.md``
+for more detailed instructions.
+
 ### Overview
 
 Our repository contains several modules. In the following, we briefly describe each of the modules in the "src/"
