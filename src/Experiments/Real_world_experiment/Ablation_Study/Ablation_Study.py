@@ -1,4 +1,5 @@
 import os
+import random
 import shutil
 import warnings
 from pathlib import Path
@@ -15,6 +16,8 @@ warnings.filterwarnings(category=RuntimeWarning, action="ignore")
 warnings.filterwarnings(category=SettingWithCopyWarning, action="ignore")
 from smac.tae import FirstRunCrashedException
 import numpy as np
+np.random.seed(1234)
+random.seed(1234)
 
 def compute_ari_values(optimizer_result_df, ground_truth_labels):
     return optimizer_result_df["labels"].apply(
@@ -32,7 +35,7 @@ def process_result_to_dataframe(optimizer_result, additional_info, y):
     for key, value in additional_info.items():
         if key == "algorithms":
             value = "+".join(value)
-        if key =="similar dataset":
+        if key == "similar dataset":
             value = value[0]
         optimizer_result_df[key] = value
 
@@ -63,14 +66,13 @@ def clean_up_optimizer_directory(optimizer_instance):
         shutil.rmtree(optimizer_instance.output_dir)
 
 
-
 # files_to_use = ["iris.csv","ecoli.csv","dermatology.csv", "zoo.csv",]
 
-def run_experiment(runs=10, 
-                    n_warmstarts = 50, 
-                    n_loops=100, 
-                    components=["all","no_algo_reduction","no_cvi_selection","no_warmstart"], 
-                    time_limit = 240 * 60):
+def run_experiment(runs=10,
+                   n_warmstarts=50,
+                   n_loops=70,
+                   components=["all", "no_algo_reduction", "no_cvi_selection", "no_warmstart"],
+                   time_limit=240 * 60):
 
     np.random.seed(0)
     # Specify where to find our MKR
@@ -85,16 +87,17 @@ def run_experiment(runs=10,
     print(files)
     print(counter)
     print(len(files))
-    mf_sets_to_use = [  # MetaFeatureExtractor.meta_feature_sets[2], # "statistical"
+    mf_sets_to_use = [
+        # MetaFeatureExtractor.meta_feature_sets[2], # "statistical"
         # MetaFeatureExtractor.meta_feature_sets[4], # ["statistical", "info-theory", "general"]
         MetaFeatureExtractor.meta_feature_sets[5],  # ["statistical", "general"] --> Best one in general comparison
         # MetaFeatureExtractor.meta_feature_sets[8] # "autocluster"
     ]
 
-    w = n_warmstarts
-    #n_loops = 100  # Number of optimizer loops. This is n_loops = n_warmstarts + x
+    w = n_warmstarts    #n_loops = 70  # Number of optimizer loops. This is n_loops = n_warmstarts + x
 
     for run in range(runs):
+        seed = run * 1234
         print(mf_sets_to_use)
         for mf_set in mf_sets_to_use:
             print("-------------")
@@ -142,8 +145,6 @@ def run_experiment(runs=10,
                         limit_cs = True
                         cvi = "predict"
 
-                    #time_limit = 240 * 60  # Time limit of overall optimization --> Aborts earlier if n_loops not finished but time_limit reached
-
                     dataset_name = f
 
                     print(n_warmstarts)
@@ -159,7 +160,9 @@ def run_experiment(runs=10,
                                                                                                  limit_cs=limit_cs,
                                                                                                  cvi=cvi,
                                                                                                  time_limit=time_limit,
-                                                                                                 dataset_name=dataset_name)
+                                                                                                 dataset_name=dataset_name,
+                                                                                                 seed=seed
+                                                                                                 )
                         print(additional_info)
 
                         optimizer_result_df = process_result_to_dataframe(optimizer_instance, additional_info, y=y)
@@ -174,7 +177,7 @@ def run_experiment(runs=10,
                         optimizer_result_df[e] = True
 
                     mf_set_string = Helper.mf_set_to_string(mf_set)
-                    result_path = Path(path_to_store_results) / Path(mf_set_string) / f"warmstarts_{w}" / Path(
+                    result_path = Path(path_to_store_results) / Path(mf_set_string) / Path(
                         component) / f"run_{run}"
                     print("Resultpath:")
                     print(result_path)
@@ -182,3 +185,7 @@ def run_experiment(runs=10,
                         result_path.mkdir(exist_ok=True, parents=True)
 
                     optimizer_result_df.to_csv(result_path / dataset_name, index=False)
+
+
+if __name__ == '__main__':
+    run_experiment(runs=10)

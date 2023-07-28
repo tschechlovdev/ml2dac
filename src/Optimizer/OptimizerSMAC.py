@@ -152,9 +152,9 @@ class SMACOptimizer(AbstractOptimizer):
     """
 
     def __init__(self, dataset, wallclock_limit=120 * 60, cvi=None, n_loops=None, smac=SMAC4HPO, cs=None,
-                 ouput_dir=None, true_labels=None):
+                 ouput_dir=None, true_labels=None, random_state=1234):
         super().__init__(dataset=dataset, cvi=cvi, cs=cs, n_loops=n_loops, output_dir=ouput_dir,
-                         true_labels=true_labels, wallclock_limit=wallclock_limit)
+                         true_labels=true_labels, wallclock_limit=wallclock_limit, random_sate=random_state)
 
         self.smac_algo = smac
         self.smac = None

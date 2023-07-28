@@ -16,6 +16,13 @@ def mf_set_to_string(mf_set):
     return '+'.join(mf_set) if isinstance(mf_set, list) else mf_set
 
 
+def cvi_accuracy(cvi_acc, mf_set):
+    if mf_set == "MF - AutoCluster":
+        return 0.66789
+    else:
+        return cvi_acc[cvi_acc["Meta-Feature Set"] == mf_set]["accuracy"].values[0]
+
+
 def get_model_name(classifier_instance=RandomForestClassifier()):
     return str(type(classifier_instance)).split(".")[-1][:-2]
 
@@ -133,6 +140,5 @@ def add_iteration_metric_wallclock_time(optimizer_result_df, selected_cvi):
     optimizer_result_df['max iteration'] = max_iteration
     optimizer_result_df = optimizer_result_df[optimizer_result_df[selected_cvi]
                                               == optimizer_result_df['CVI score']]
-
 
     return optimizer_result_df

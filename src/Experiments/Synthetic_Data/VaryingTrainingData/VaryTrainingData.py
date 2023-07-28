@@ -2,6 +2,7 @@ import ast
 import os
 import shutil
 import warnings
+import random
 from pathlib import Path
 
 import numpy as np
@@ -20,6 +21,8 @@ from MetaLearning.LearningPhase import mkr_path, optimal_cvi_file_name
 from MetaLearning.MetaFeatureExtractor import extract_meta_features
 from Optimizer.OptimizerSMAC import SMACOptimizer
 
+np.random.seed(1234)
+random.seed(1234)
 warnings.filterwarnings("ignore")
 mkr_path = LearningPhase.mkr_path
 
@@ -79,7 +82,9 @@ def clean_up_optimizer_directory(optimizer_instance):
     if os.path.exists(optimizer_instance.output_dir) and os.path.isdir(optimizer_instance.output_dir):
         shutil.rmtree(optimizer_instance.output_dir)
 
-def run_experiment(n_warmstarts=25, n_loops=100, limit_cs=True, result_path="gen_results/evaluation_results/synthetic_data/vary_training_data"):
+
+def run_experiment(n_warmstarts=25, n_loops=100, limit_cs=True,
+                   result_path="gen_results/evaluation_results/synthetic_data/vary_training_data"):
     n_warmstarts = 25
     n_loops = 100
     limit_cs = True
@@ -156,7 +161,7 @@ def run_experiment(n_warmstarts=25, n_loops=100, limit_cs=True, result_path="gen
             # Extract Meta-Features from training datasets
             mfs_all_training_datasets = []
             for X, name in zip([shape_sets[d_name][0] for d_name in selected_training_data_df["dataset"]],
-                            selected_training_data_df["dataset"].values):
+                               selected_training_data_df["dataset"].values):
                 print(f"extracting metafeatures {mf_set} from dataset {name}")
                 _, scores = extract_meta_features(X, mf_set)
                 mfs_all_training_datasets.append(scores)
@@ -232,7 +237,7 @@ def run_experiment(n_warmstarts=25, n_loops=100, limit_cs=True, result_path="gen
                 # Train classifier for training dataset
                 mf_X = mfs_all_training_datasets[final_training_data["training_index"]]
                 cvi_y = optimal_cvi_per_dataset["cvi"]
-                cvi_classifier = RandomForestClassifier(random_state=random_seed)
+                cvi_classifier = RandomForestClassifier(random_state=1234)
                 cvi_classifier.fit(mf_X, cvi_y)
 
                 ### (a1) find similar dataset ###
@@ -260,7 +265,7 @@ def run_experiment(n_warmstarts=25, n_loops=100, limit_cs=True, result_path="gen
 
                 ### (a4) definition of configurations space (dependent on warmstart configurations) ###
 
-                ap = ApplicationPhase(k_range=(2,200))
+                ap = ApplicationPhase(k_range=(2, 200))
                 cs, algorithms = ap.define_config_space(warmstart_configs, limit_cs=limit_cs)
                 if n_warmstarts > 0:
                     # update warmstart configurations
@@ -277,17 +282,19 @@ def run_experiment(n_warmstarts=25, n_loops=100, limit_cs=True, result_path="gen
                 print("starting the optimization")
 
                 opt_instance = SMACOptimizer(dataset=test_X,
-                                            true_labels=None,  # we do not have access to them in the application phase
-                                            cvi=predicted_cvi,
-                                            n_loops=n_loops,
-                                            cs=cs,
-                                            wallclock_limit=240 * 60,
-                                            )
+                                             true_labels=None,  # we do not have access to them in the application phase
+                                             cvi=predicted_cvi,
+                                             n_loops=n_loops,
+                                             cs=cs,
+                                             wallclock_limit=240 * 60,
+                                             random_state=random_seed
+                                             )
 
                 opt_instance.optimize(initial_configs=warmstart_configs)
+                additional_result_info["random_seed"] = random_seed
 
                 optimizer_result_df = process_result_to_dataframe(opt_instance, additional_info=additional_result_info,
-                                                                ground_truth_clustering=test_y)
+                                                                  ground_truth_clustering=test_y)
                 clean_up_optimizer_directory(opt_instance)
 
                 optimizer_result_df.to_csv(path / file_name, index=False)

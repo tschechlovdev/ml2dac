@@ -162,7 +162,8 @@ class ApplicationPhase:
                                     limit_cs=True,  # Used to reduce the configuration space based on warmstart configs
                                     time_limit=120 * 60,  # Set default timeout after 2 hours of optimization
                                     optimizer=SMACOptimizer,
-                                    n_similar_datasets=1):
+                                    n_similar_datasets=1,
+                                    seed=1234):
 
         print("----------------------------------")
         self._validate_inputs(n_warmstarts, n_optimizer_loops, cvi, limit_cs)
@@ -222,8 +223,11 @@ class ApplicationPhase:
                                  cvi=cvi,
                                  n_loops=n_optimizer_loops,
                                  cs=cs,
-                                 wallclock_limit=time_limit
+                                 wallclock_limit=time_limit,
+                                 random_state=seed
                                  )
+
+        additional_result_info["random_seed"] = seed
 
         not_successful = True
 
@@ -256,11 +260,7 @@ if __name__ == '__main__':
     X, _ = make_blobs()
     ml2dac = ApplicationPhase()
 
-    ml2dac.optimize_with_meta_learning(X=X, cvi="predict", n_warmstarts=50, n_optimizer_loops=50, limit_cs=True,
-                                       n_similar_datasets=10)
-
-    ml2dac.optimize_with_meta_learning(X=X, cvi="predict", n_warmstarts=5, n_optimizer_loops=10, limit_cs=False)
-
-    ml2dac.optimize_with_meta_learning(X=X, cvi="predict", n_warmstarts=10, n_optimizer_loops=10, limit_cs=False)
-
-    ml2dac.optimize_with_meta_learning(X=X, cvi="predict", n_warmstarts=10, n_optimizer_loops=10, limit_cs=True)
+    ml2dac.optimize_with_meta_learning(X=X, cvi="predict",
+                                       n_warmstarts=50,
+                                       n_optimizer_loops=50, limit_cs=True,
+                                       n_similar_datasets=10, seed=2)

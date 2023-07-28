@@ -11,6 +11,8 @@ import warnings
 
 from pandas.core.common import SettingWithCopyWarning
 
+from Utils import Helper
+
 warnings.filterwarnings(action="ignore",
                         # SettingWithCopyWarning
                         )
@@ -32,11 +34,6 @@ def add_median_labels(ax):
                        # bbox=dict(facecolor='#445A64')
                        # bbox=dict(facecolor='lightgray')
                        )
-        # create median-colored border around white text for contrast
-        # text.set_path_effects([
-        #    path_effects.Stroke(linewidth=3, foreground=median.get_color()),
-        #    path_effects.Normal(),
-        # ])
 
 
 def add_avg_labels(ax):
@@ -44,7 +41,6 @@ def add_avg_labels(ax):
     # determine number of lines per box (this varies with/without fliers)
     boxes = [c for c in ax.get_children() if type(c).__name__ == 'PathPatch']
     lines_per_box = int(len(lines) / len(boxes))
-    print(lines_per_box)
     # iterate over median lines
     for median in lines[5:len(lines):lines_per_box]:
         # display median value at center of median line
@@ -98,114 +94,7 @@ def add_median_labels_2(ax):
         # ])
 
 
-def gen_figures(evaluation=False, real_world=False, ablation=False, varying_training_data=False):
-    # Load Results for different Meta-Feature Sets (cf. Section 7.2)
-    merged_results = pd.DataFrame()
-    mfs = [
-        "general",
-        "statistical",
-        "info-theory",
-        ["statistical", "info-theory"],
-        ["statistical", "general"],
-        ["info-theory", "general"],
-        ["statistical", "info-theory", "general"],
-        # "optics",
-        "meanshift",
-        "autocluster"
-    ]
-
-    mf_mapping = {
-        "general": "General",
-        "statistical": "Stats",
-        "info-theory": "Info",
-        "+".join(["statistical", "info-theory"]): "Stats+Info",
-        "+".join(["statistical", "general"]): "Stats+General",
-        "+".join(["info-theory", "general"]): "Info+General",
-        "+".join(["statistical", "info-theory", "general"]): "Stats+Info+General",
-        # "optics": "O",
-        "meanshift": "MF - AutoClust",
-        "autocluster": "MF - AutoCluster",
-        #    "CVI (CH)": "CVI (CH)"
-    }
-
-    mf_orders = ['+'.join(x) if isinstance(x, list) else x for x in mfs]
-    print(mf_orders)
-    mf_results = pd.DataFrame()
-
-    used_mf_sets = ["statistical+info-theory+general", "statistical+general"]
-    for mf in mfs:
-        print(mf)
-        if isinstance(mf, list):
-            mf = '+'.join(mf)
-
-        if evaluation and (mf == "statistical+info-theory+general" or mf == "statistical+general"):
-            mf_df = pd.read_csv(f"gen_results/evaluation_results/synthetic_data/results_{mf}.csv")
-        else:
-            import os
-            print(os.curdir)
-            print(os.listdir())
-            mf_df = pd.read_csv(f"evaluation_results/synthetic_data/results_{mf}.csv")
-            mf_df["Best ARI"] = mf_df["ARI"]
-        # for x in ["_1", "_2", "_3"]:
-        #    mf_df = pd.read_csv(f"{mf}_online_result{x}.csv", index_col=0)
-        mf_df["Meta-Feature Set"] = mf
-        mf_results = pd.concat([mf_results, mf_df])
-
-    mf_results["Meta-Feature Set"].unique()
-    mf_results["ARI"] = mf_results["ARI"].apply(lambda x: x if x > 0 else x * -1)
-    mf_results["Best ARI"] = mf_results["Best ARI"].apply(lambda x: x if x > 0 else x * -1 * 100)
-
-    mf_results["Meta-Feature Set"] = pd.Categorical(mf_results["Meta-Feature Set"], categories=mf_orders, ordered=True)
-    mf_results["Meta-Feature Set"] = mf_results["Meta-Feature Set"].apply(lambda mf: mf_mapping[mf])
-    mf_results = mf_results
-    # if "wallclock time" not in mf_results.columns:
-    #    mf_results["wallclock time"] = mf_results.groupby(["Meta-Feature Set", "dataset"])["runtime"].sum().reset_index()
-    ############################################################################
-    #### Some Preprocessing stuff --> assign dataset properties as columns #####
-
-    # todo: first attempt to show ARI over time --> Does not look really good ...
-
-    # mf_results["time interval"] = mf_results["wallclock time"].apply(lambda x: int(x/30))
-    # dataset_types = ["gaussian", "varied", "circles"
-    # print('type=varied-k=30-n=2000-d=10-noise=0'.split('-')[0].split('=')[1])
-    mf_results["type"] = mf_results["dataset"].apply(lambda x: x.split('-')[0].split('=')[1])
-    mf_results["n"] = mf_results["dataset"].apply(lambda x: x.split('-')[2].split('=')[1]).astype(int)
-    mf_results["d"] = mf_results["dataset"].apply(lambda x: x.split('-')[3].split('=')[1]).astype(int)
-    mf_results["noise"] = mf_results["dataset"].apply(lambda x: x.split('-')[4].split('=')[1]).astype(float)
-    mf_results["k"] = mf_results["dataset"].apply(lambda x: x.split('-')[1].split('=')[1]).astype(float)
-    mf_results["Meta-Feature Set"].unique()
-
-    metric_ranking = pd.read_csv("evaluation_results/synthetic_data/metric_ranking.csv", index_col=0)
-    metric_ranking["accuracy"] = metric_ranking.apply(lambda x: int(x["metric"] == x["optimal metric"]), axis=1)
-    metric_ranking["Meta-Feature Set"] = metric_ranking["mf_set"]
-    metric_ranking = metric_ranking.drop("mf_set", axis=1)
-    metric_ranking["Meta-Feature Set"] = metric_ranking["Meta-Feature Set"].apply(
-        lambda mf: mf if mf == "optics" else mf_mapping[mf])
-    cvi_acc = metric_ranking.groupby(["Meta-Feature Set"])["accuracy"].mean().reset_index()
-    cvi_acc = cvi_acc[cvi_acc["Meta-Feature Set"] != "optics"]
-    mf_ari_runtime = mf_results[mf_results["iteration"] == 25].groupby(["Meta-Feature Set"])[
-        "Best ARI", "mf time"].mean().reset_index()
-
-    def cvi_accuracy(mf_set):
-        if mf_set == "MF - AutoCluster":
-            return 0.667
-        else:
-            return cvi_acc[cvi_acc["Meta-Feature Set"] == mf_set]["accuracy"].values[0]
-
-    mf_ari_runtime["CVI Selection"] = mf_ari_runtime["Meta-Feature Set"].apply(lambda x: cvi_accuracy(x))
-    mf_ari_runtime["ARI (w=25)"] = mf_ari_runtime["Best ARI"]
-    mf_ari_runtime["Runtime Meta-Feature Extraction"] = mf_ari_runtime["mf time"]
-    mf_ari_runtime = mf_ari_runtime.drop(["Best ARI", "mf time"], axis=1)
-
-    # Generate Table 3
-    output_path = Path("evaluation_results/output")
-    output_path.mkdir(exist_ok=True, parents=True)
-    mf_ari_runtime.to_csv("evaluation_results/output/Table3.csv")
-    mf_ari_runtime
-
-    # Load Synthetic Data Results
-
-    # coldstart_df = pd.concat([pd.read_csv(f'coldstart_online_result_{i}.csv', index_col=None) for i in range(1, 4)])
+def load_synthetic_data_results(evaluation=False):
     aml4c_df = pd.read_csv(f'evaluation_results/related_work/aml4c_results.csv', index_col=False)
     aml4c_df["type"] = aml4c_df["dataset"].apply(lambda x: x.split('-')[0].split('=')[1])
     aml4c_df["n"] = aml4c_df["dataset"].apply(lambda x: x.split('-')[2].split('=')[1]).astype(int)
@@ -218,9 +107,6 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
 
     merged_results = pd.DataFrame()
 
-    # stats_df = pd.concat([pd.read_csv(f'A4DC_results/statistical_online_result_{i}.csv', index_col=None) for i in range(1,4)])
-    # stats_general_df = pd.concat([pd.read_csv(f'A4DC_results/statistical+general_online_result_{i}.csv', index_col=None) for i in range(1,4)])
-
     base_path = ''
     if evaluation:
         base_path = 'gen_results/'
@@ -232,17 +118,12 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
     stats_info_general_df = pd.read_csv(
         f'{base_path}evaluation_results/synthetic_data/results_statistical+info-theory+general.csv', index_col=None)
 
-    # stats_info_general_df = pd.concat([pd.read_csv(f'A4DC_results/statistical+info-theory+general_online_result_{i}.csv', index_col=None) for i in range(1,4)])
-    # stats_item_mfe_df = pd.read_csv(f'stats_itemset_mfe_online_result{x}.csv', index_col=None)
-
-    # a_for_dc_autocluster_df = pd.concat([pd.read_csv(f'A4DC_results/autocluster_online_result_{i}.csv', index_col=None) for i in range(1,4)])
     a_for_dc_autocluster_df = pd.read_csv(f'evaluation_results/synthetic_data/results_autocluster.csv', index_col=None)
 
     # stats_df["Method"] = "ML2DAC (Stats)"
     stats_general_df["Method"] = "ML2DAC (Stats+General)"
     stats_info_general_df["Method"] = "ML2DAC (Stats+Info+General)"
     a_for_dc_autocluster_df["Method"] = "ML2DAC - AutoCluster"
-    # stats_item_mfe_df["Method"] = "A4CDC - stats+item"
 
     # related_work_online_df = pd.read_csv('related_work/related_work_online_result.csv', index_col=None)
     related_work_online_df = pd.read_csv('evaluation_results/related_work/autoclust.csv', index_col=None)
@@ -251,7 +132,6 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
     related_work_online_df["Best ARI"] = related_work_online_df["ARI"]
 
     autocluster_df = pd.read_csv("evaluation_results/related_work/autocluster_mv.csv")
-    print(autocluster_df["Method"].unique)
     autocluster_df = autocluster_df[autocluster_df["Method"] == "AutoCluster - MV"]
     autocluster_df["Method"] = "AutoCluster"
     autocluster_df["Best ARI"] = autocluster_df["ARI"]
@@ -281,13 +161,10 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
     merged_results["d"] = merged_results["dataset"].apply(lambda x: x.split('-')[3].split('=')[1]).astype(int)
     merged_results["noise"] = merged_results["dataset"].apply(lambda x: x.split('-')[4].split('=')[1]).astype(float)
     merged_results["k"] = merged_results["dataset"].apply(lambda x: x.split('-')[1].split('=')[1]).astype(float)
+    return merged_results, aml4c_df
 
-    datasets = merged_results["dataset"].unique()
-    metrics = merged_results["metric"].unique()
-    methods = merged_results["Method"].unique()
 
-    # Generate Figure 4
-
+def generate_figure_4(evaluation, merged_results):
     methods_to_use = ["ML2DAC (Stats+General)",
                       "ML2DAC (Stats+Info+General)",
                       "AML4C (DBCV)",
@@ -295,29 +172,26 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
                       "AutoClust",
                       "AutoCluster",
                       ]
-    print(merged_results[["Method", "iteration", "Best ARI"]])
     selcted_methods = merged_results[merged_results["Method"].isin(methods_to_use)]
-    print(selcted_methods[["Method", "iteration", "Best ARI"]])
     selcted_methods["ARI"] = selcted_methods["ARI"] * 100
     selcted_methods["Best ARI"] = selcted_methods["Best ARI"] * 100
 
     selcted_methods["Method"] = pd.Categorical(selcted_methods["Method"], ordered=True, categories=methods_to_use)
-    filled_markers = ('o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 'd', 'P', 'X')
     selcted_methods = selcted_methods.reset_index()
 
-
     if evaluation:
-        ax = sns.lineplot(x="iteration", y="Best ARI", markevery=[0] + [x for x in range(4, 100, 5)] + [99], markers=True,
-                        style="Method",
-                        data=selcted_methods
-                        , hue="Method",
-                        )
-    else: 
+        ax = sns.lineplot(x="iteration", y="Best ARI", markevery=[0] + [x for x in range(4, 100, 5)] + [99],
+                          markers=True,
+                          style="Method",
+                          data=selcted_methods
+                          , hue="Method",
+                          )
+    else:
         ax = sns.lineplot(x="iteration", y="ARI", markevery=[0] + [x for x in range(4, 100, 5)] + [99], markers=True,
-                        style="Method",
-                        data=selcted_methods
-                        , hue="Method",
-                        )
+                          style="Method",
+                          data=selcted_methods
+                          , hue="Method",
+                          )
 
     ax.set_xticks([0] + list(range(10, 105, 10)))
     ax.set_xlabel(r"Optimizer Loop")
@@ -337,10 +211,19 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
     plt.savefig("evaluation_results/output/Fig4_accuracy_average_baselines.pdf", bbox_inches='tight')
     # plt.show()
     plt.close()
+    return selcted_methods
 
-    # Generate Figure 5 (a - d)
 
-    font = {'family': 'normal',
+def generate_figure_5(evaluation, selcted_methods):
+    methods_to_use = ["ML2DAC (Stats+General)",
+                      "ML2DAC (Stats+Info+General)",
+                      "AML4C (DBCV)",
+                      "AML4C (COP)",
+                      "AutoClust",
+                      "AutoCluster",
+                      ]
+
+    font = {'family': 'DejaVu Sans',
             'weight': 'normal',
             'size': 16}
 
@@ -368,7 +251,6 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
         medians["Method"] = pd.Categorical(medians["Method"], ordered=True, categories=methods_to_use)
         medians = medians[ari_column].values
         # medians = medians.sort_values("Method")
-        print(medians)
 
         vertical_offset = data['ARI'].mean() * 0.05  # offset from median for display
 
@@ -394,11 +276,9 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
         # plt.show()
         plt.close()
 
-    # Generate Figure 6a and 6b
-    merged_results = pd.DataFrame()
 
-    # stats_df = pd.concat([pd.read_csv(f'A4DC_results/statistical_online_result_{i}.csv', index_col=None) for i in range(1,4)])
-    # stats_general_df = pd.concat([pd.read_csv(f'A4DC_results/statistical+general_online_result_{i}.csv', index_col=None) for i in range(1,4)])
+def generate_figure_6(evaluation, aml4c_df):
+    # Generate Figure 6a and 6b
     base_path = ''
     if evaluation:
         base_path = 'gen_results/'
@@ -409,25 +289,17 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
     stats_info_general_df = pd.read_csv(
         f'{base_path}evaluation_results/synthetic_data/results_statistical+info-theory+general.csv', index_col=None)
 
-    # stats_info_general_df = pd.concat([pd.read_csv(f'A4DC_results/statistical+info-theory+general_online_result_{i}.csv', index_col=None) for i in range(1,4)])
-    # stats_item_mfe_df = pd.read_csv(f'stats_itemset_mfe_online_result{x}.csv', index_col=None)
-
-    # a_for_dc_autocluster_df = pd.concat([pd.read_csv(f'A4DC_results/autocluster_online_result_{i}.csv', index_col=None) for i in range(1,4)])
     a_for_dc_autocluster_df = pd.read_csv(f'evaluation_results/synthetic_data/results_autocluster.csv', index_col=None)
 
     stats_general_df["Method"] = "ML2DAC (Stats+General)"
     stats_info_general_df["Method"] = "ML2DAC (Stats+Info+General)"
     a_for_dc_autocluster_df["Method"] = "ML2DAC - AutoCluster"
-    # stats_item_mfe_df["Method"] = "A4CDC - stats+item"
 
-    # related_work_online_df = pd.read_csv('related_work/related_work_online_result.csv', index_col=None)
     related_work_online_df = pd.read_csv('evaluation_results/related_work/autoclust.csv', index_col=None)
 
     related_work_online_df["Method"] = "AutoClust"
 
     autocluster_df = pd.read_csv("evaluation_results/related_work/autocluster_mv.csv")
-    print(autocluster_df["Method"].unique)
-    # autocluster_df = autocluster_df[autocluster_df["Method"] == "AutoCluster - MV"]
     autocluster_df["Method"] = "AutoCluster"
     merged_results = pd.concat([stats_general_df, stats_info_general_df, a_for_dc_autocluster_df,
                                 autocluster_df, related_work_online_df, aml4c_df])
@@ -465,9 +337,9 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
         for dataset in df["dataset"].unique():
             mask = (df["dataset"] == dataset)
             data_df = df[mask]
-            #max_iteration = data_df["max iteration"].max()
+            # max_iteration = data_df["max iteration"].max()
             max_iteration = data_df["iteration"].max()
-            #max_iteration = data_df["max iteration"].values[0]
+            # max_iteration = data_df["max iteration"].values[0]
             mask_2 = data_df["iteration"] <= max_iteration
             data_df = data_df[mask_2]
 
@@ -500,7 +372,6 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
     medians = data.groupby(['Method'])['max wallclock'].median()
 
     vertical_offset = {0: 30, 1: 50, 2: 50, 3: 50, 4: 50, 5: 50}
-    print(vertical_offset)
     ax = sns.boxplot(data=data, x="Method", y="max wallclock", flierprops=flierprops
                      )
     ax.set_yticklabels([10, 100, 1000, 10000])
@@ -549,73 +420,51 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
     plt.close()
 
 
-    ############## Generate Table 4
-
-    base_path = ''
-    if varying_training_data: 
-        #path = 'gen_results/evaluation_results/synthetic_data/vary_training_data/run_0/'
-        path = f"evaluation_results/varying_training_data"
+def generate_table_4(varying_training_data):
+    if varying_training_data:
+        path = 'gen_results/evaluation_results/synthetic_data/vary_training_data/run_0/'
+        #path = f"evaluation_results/varying_training_data"
     else:
         path = f"evaluation_results/varying_training_data"
+
     varying_training_data_results = pd.DataFrame()
     for n_train in list(range(2, 72, 10)):
         dataset_results = os.listdir(path + f"/n_training_data_{n_train}")
         results = pd.concat(
             [pd.read_csv(path + f"/n_training_data_{n_train}" + f"/{data}") for data in dataset_results],
             ignore_index=True)
-        results["n_train"] = n_train * -1
+        results["#Training Datasets"] = n_train
+        results["Best ARI"] *= -1
+        results["ARI"] = results["Best ARI"]
         varying_training_data_results = pd.concat([varying_training_data_results, results], ignore_index=True)
 
-    varying_training_data_results[varying_training_data_results["iteration"] == 100].groupby("n_train")[
-        "Best ARI"].mean().reset_index().apply(lambda x: x*-1).transpose().to_csv("evaluation_results/output/Table4.csv")
-    ############### Real-World results (cf. Section 7.4)
+    pd.DataFrame(varying_training_data_results[(varying_training_data_results["iteration"] == 100) & (
+        varying_training_data_results["#Training Datasets"].isin(list(range(2, 64, 10))))].groupby(
+        "#Training Datasets")[
+                     "ARI"].mean().round(4)).transpose().to_csv(
+        "evaluation_results/output/Table4.csv")
 
+
+def generate_figure_7(real_world):
     data_path = Path("real_world_data/")
     datasets = [f for f in os.listdir(data_path) if os.path.isfile(data_path / f)]
 
-    # 50 warmstarts + 50 loops
-    # 1 similar dataset
     if real_world:
         ml2dac_path = Path("gen_results/evaluation_results/real_world/ML2DAC/")
     else:
         ml2dac_path = Path("evaluation_results/real_world/ML2DAC/")
 
-    # New results
-    # ml2dac_path = Path("ML2DAC/warmstart_and_bo/run_0/")
-
     ml2dac_mf_paths = [Path(x[0]) for x in os.walk(ml2dac_path)]
 
-    
     if real_world:
         aml4c_path = Path("gen_results/evaluation_results/real_world/Baselines/AML4C/")
     else:
         aml4c_path = Path("evaluation_results/real_world/Baselines/AML4C/")
 
-    aml4c_cvi_paths = [Path(x[0]) for x in os.walk(aml4c_path)]
-
-    if real_world:
-        #autoclust_path = Path("gen_results/evaluation_results/real_world/Baselines/AutoClust/")
-        autoclust_path = Path("evaluation_results/real_world/Baselines/AutoClust/")
-    else:
-        autoclust_path = Path("evaluation_results/real_world/Baselines/AutoClust/")
-
-    #if real_world:
-        #autocluster_path = Path("gen_results/evaluation_results/real_world/Baselines/AutoCluster/MV")
-    #else:
-        #autocluster_path = Path("evaluation_results/real_world/Baselines/AutoCluster/MV")
-    
-    #autoclust_path = Path("evaluation_results/real_world/Baselines/AutoClust/")
-    
-    autocluster_path = Path("evaluation_results/real_world/Baselines/AutoCluster/MV")
-    
-
-    method_paths = [autoclust_path, autocluster_path]
-    method_paths.extend(aml4c_cvi_paths)
-    method_paths.extend(ml2dac_mf_paths)
-
     all_results = pd.DataFrame()
 
-    replacements = {"gen_results/":"","evaluation_results/":"","\\": "-", "/": "-", "-warmstarts": "", "..-": "", "real_world-": "", "Baselines-": "",
+    replacements = {"gen_results/": "", "evaluation_results/": "", "\\": "-", "/": "-", "-warmstarts": "", "..-": "",
+                    "real_world-": "", "Baselines-": "",
                     "statistical": "Stats",
                     "general": "General", "info-theory": "Info", "-similar_datasets": "",
                     "-n_similar_1": "",
@@ -627,6 +476,12 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
                     "evaluation_results-": "",
                     "gen_results-": ""}
 
+    aml4c_cvi_paths = [Path(x[0]) for x in os.walk(aml4c_path)]
+    autoclust_path = Path("evaluation_results/real_world/Baselines/AutoClust/")
+    autocluster_path = Path("evaluation_results/real_world/Baselines/AutoCluster/MV")
+    method_paths = [autoclust_path, autocluster_path]
+    method_paths.extend(aml4c_cvi_paths)
+    method_paths.extend(ml2dac_mf_paths)
     for data in datasets:
         for method_path in method_paths:
             method_name = str(PurePath(method_path))
@@ -636,7 +491,6 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
             data_path = method_path / data
 
             if data_path.exists():
-                print(data_path)
 
                 df = pd.read_csv(data_path)
                 if len(df) > 0:
@@ -645,26 +499,12 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
 
                     df = df.sort_values("iteration", ascending=True)
 
-                    print(df.columns)
                     if "Best ARI" not in df.columns:
                         df["Best CVI"] = df["metric score"].cummin()
                         df["Best ARI"] = 0
                         df.loc[df["iteration"] == 0, "Best ARI"] = df["ARI"].values[0]
                         df["changed"] = df["Best CVI"].diff()
                         df["Best ARI"] = df.apply(lambda x: x["ARI"] if x["changed"] > 0 else x["Best ARI"], axis=1)
-
-                        # for i in range(0, df["iteration"].max() -1):
-                        #     best_ari_value = 0
-                        #     current_iter_row = df[df["iteration"] == i]
-                        #     next_iter_row = df[df["iteration"] == i+1]
-                        #
-                        #     df.loc[df["iteration"] == i, "Best ARI"] = df["ARI"].values[0]
-                        #
-                        #     if next_iter_row["Best CVI"] < current_iter_row["Best CVI"]:
-                        #         best_ari_value = next_iter_row["ARI"]
-                        #
-                        #     df.loc[df["iteration"] == i+1, "Best ARI"] = best_ari_value
-
 
                     df["Best ARI"] = df["Best ARI"] * -1
                     df["Best* ARI"] = df["Best ARI"].cummax()
@@ -686,11 +526,9 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
                "AutoClust",
                "AutoCluster-MV",
                ]
-    print(all_results)
-    print(all_results["Method"].unique())
+
     method_results = all_results[(all_results["Method"].isin(methods))]
-    print(method_results)
-    #exit()
+    # exit()
     # Generate Figure 7
     plt.close()
     plt.figure()
@@ -728,86 +566,188 @@ def gen_figures(evaluation=False, real_world=False, ablation=False, varying_trai
     ax.text(30, 55, "Warmstart Configurations")
 
     plt.savefig("evaluation_results/output/Fig7_real_world_data_accuracy_comparison.pdf", bbox_inches='tight')
+    return method_results
 
-    # Table 5 (Runtime)
 
+def generate_table_5(real_world, method_results):
     method_results["Runtime (s)"] = method_results["wallclock time"]
 
     mean_runtime = method_results[method_results["iteration"] == 100].groupby(["Method"])[
-        "Runtime (s)"].mean().reset_index()
+        "Runtime (s)"].mean().round(2) .reset_index()
 
     median_runtime = method_results[method_results["iteration"] == 100].groupby(["Method"])[
-        "Runtime (s)"].median().reset_index()
+        "Runtime (s)"].median().round(2) .reset_index()
 
     runtime_real_world_df = mean_runtime.join(median_runtime.set_index("Method"), on="Method", lsuffix=" Median",
                                               rsuffix=" Mean")
-    runtime_real_world_df
 
     runtime_real_world_df.to_csv("evaluation_results/output/Table5.csv")
 
-    # Table 6 (Ablation Study)
+
+def generate_table_6(ablation):
     if ablation:
-        #path_to_abl_study_results = Path("gen_results/evaluation_results/real_world/abl_study/statistical+general/")
-        path_to_abl_study_results = Path("evaluation_results/ablation_study/statistical+general/")
+        path_to_abl_study_results = Path("gen_results/evaluation_results/real_world/abl_study/statistical+general/")
+        #path_to_abl_study_results = Path("evaluation_results/abl_study/statistical+general")
     else:
-        path_to_abl_study_results = Path("evaluation_results/ablation_study/statistical+general/")
+        path_to_abl_study_results = Path("evaluation_results/abl_study/statistical+general/")
 
     components = os.listdir(path_to_abl_study_results)
-    
 
-    warmstart = 25
-    components = os.listdir(path_to_abl_study_results / f"warmstarts_{str(warmstart)}")
-    runs = os.listdir(path_to_abl_study_results / f"warmstarts_{str(warmstart)}" / "all")
-    datasets = os.listdir(path_to_abl_study_results / f"warmstarts_{warmstart}" / "all" / "run_0")
-    print(datasets)
+    # components = os.listdir("abl_study/statistical+general/warmstarts_50")
 
-    all_abl_results = pd.DataFrame()
+    abl_results = pd.DataFrame()
     for component in components:
-        run = 0
-        for dataset in datasets:
-            df = pd.read_csv(
-                path_to_abl_study_results / f"warmstarts_{str(warmstart)}" / component / f"run_{run}" / dataset)
-            df["run"] = run
-            df["warmstarts"] = warmstart
-            df["component"] = component
-            df["Best ARI*"] = df["Best ARI"].cummin()
-            all_abl_results = pd.concat([all_abl_results, df])
-    all_abl_results
-
-    ml2dac_path = Path("evaluation_results/real_world/ML2DAC/statistical+general/")
-    result_all_components = pd.DataFrame()
-    for dataset in datasets:
-        if not (ml2dac_path / dataset).exists():
-            print(f"File for {dataset} does not exist - continue")
-            continue
-        df = pd.read_csv(ml2dac_path / dataset)
-        print(df)
-        if len(df) == 0:
-            continue
-        df["run"] = run
-        df["warmstarts"] = 25
-        df["component"] = "all"
-        df["Best ARI*"] = df["Best ARI"].cummin()
-        result_all_components = pd.concat([result_all_components, df])
-
-    result_all_components[result_all_components["iteration"] == 100]["Best ARI"].mean() * -1
-
-    warmstart_result = all_abl_results[(all_abl_results["warmstarts"] == 25) & (all_abl_results["run"] == 0)
-                                       & (all_abl_results["iteration"] == 100)
-                                       & (~all_abl_results["dataset"].isin(["mnist-digits.csv", "mnist-fashion.csv",
-                                                                            "handwritten-digits.csv"]))]
-    warmstart_result["Best ARI"] = warmstart_result["Best ARI"] * -1 * 100
-
-    warmstart_result[warmstart_result["component"] != "only_warmstarts"].groupby("component")["Best ARI"].mean()
-
-    abl_results = warmstart_result[warmstart_result["component"] != "only_warmstarts"].groupby("component")[
-        "Best ARI"].mean().reset_index()
+        runs = os.listdir(path_to_abl_study_results / component)
+        for run in runs:
+            data_results = pd.concat([pd.read_csv(path_to_abl_study_results / component / run / dataset) for dataset in
+                                      os.listdir(path_to_abl_study_results / component / run)])
+            data_results["run"] = run
+            data_results["component"] = component
+            abl_results = pd.concat([abl_results, data_results])
 
     abl_results["ARI"] = abl_results["Best ARI"]
     abl_results = abl_results.drop("Best ARI", axis=1)
-    abl_results
+    abl_results = abl_results[abl_results["iteration"] == 70].groupby("component")["ARI"].mean().round(4) * -1
 
     abl_results.to_csv("evaluation_results/output/Table6.csv")
+
+
+def generate_table_3(evaluation=False):
+    merged_results = pd.DataFrame()
+    mfs = [
+        "general",
+        "statistical",
+        "info-theory",
+        ["statistical", "info-theory"],
+        ["statistical", "general"],
+        ["info-theory", "general"],
+        ["statistical", "info-theory", "general"],
+        # "optics",
+        "meanshift",
+        "autocluster"
+    ]
+
+    mf_mapping = {
+        "general": "General",
+        "statistical": "Stats",
+        "info-theory": "Info",
+        "+".join(["statistical", "info-theory"]): "Stats+Info",
+        "+".join(["statistical", "general"]): "Stats+General",
+        "+".join(["info-theory", "general"]): "Info+General",
+        "+".join(["statistical", "info-theory", "general"]): "Stats+Info+General",
+        # "optics": "O",
+        "meanshift": "MF - AutoClust",
+        "autocluster": "MF - AutoCluster",
+        #    "CVI (CH)": "CVI (CH)"
+    }
+
+    mf_orders = ['+'.join(x) if isinstance(x, list) else x for x in mfs]
+    print(mf_orders)
+    mf_results = pd.DataFrame()
+
+    used_mf_sets = ["statistical+info-theory+general", "statistical+general"]
+    for mf in mfs:
+        if isinstance(mf, list):
+            mf = '+'.join(mf)
+
+        if evaluation and (mf == "statistical+info-theory+general" or mf == "statistical+general"):
+            mf_df = pd.read_csv(f"gen_results/evaluation_results/synthetic_data/results_{mf}.csv")
+        else:
+            import os
+            mf_df = pd.read_csv(f"evaluation_results/synthetic_data/results_{mf}.csv")
+            mf_df["Best ARI"] = mf_df["ARI"]
+        # for x in ["_1", "_2", "_3"]:
+        #    mf_df = pd.read_csv(f"{mf}_online_result{x}.csv", index_col=0)
+        mf_df["Meta-Feature Set"] = mf
+        mf_results = pd.concat([mf_results, mf_df])
+
+    mf_results["Meta-Feature Set"].unique()
+    mf_results["ARI"] = mf_results["ARI"].apply(lambda x: x if x > 0 else x * -1)
+    mf_results["Best ARI"] = mf_results["Best ARI"].apply(lambda x: x if x > 0 else x * -1)
+
+    mf_results["Meta-Feature Set"] = pd.Categorical(mf_results["Meta-Feature Set"], categories=mf_orders, ordered=True)
+    mf_results["Meta-Feature Set"] = mf_results["Meta-Feature Set"].apply(lambda mf: mf_mapping[mf])
+    mf_results = mf_results
+
+    ############################################################################
+    #### Some Preprocessing stuff --> assign dataset properties as columns #####
+
+    mf_results["type"] = mf_results["dataset"].apply(lambda x: x.split('-')[0].split('=')[1])
+    mf_results["n"] = mf_results["dataset"].apply(lambda x: x.split('-')[2].split('=')[1]).astype(int)
+    mf_results["d"] = mf_results["dataset"].apply(lambda x: x.split('-')[3].split('=')[1]).astype(int)
+    mf_results["noise"] = mf_results["dataset"].apply(lambda x: x.split('-')[4].split('=')[1]).astype(float)
+    mf_results["k"] = mf_results["dataset"].apply(lambda x: x.split('-')[1].split('=')[1]).astype(float)
+    mf_results["Meta-Feature Set"].unique()
+
+    metric_ranking = pd.read_csv("evaluation_results/synthetic_data/metric_ranking.csv", index_col=0)
+    metric_ranking["accuracy"] = metric_ranking.apply(lambda x: int(x["metric"] == x["optimal metric"]), axis=1)
+    metric_ranking["Meta-Feature Set"] = metric_ranking["mf_set"]
+    metric_ranking = metric_ranking.drop("mf_set", axis=1)
+    metric_ranking["Meta-Feature Set"] = metric_ranking["Meta-Feature Set"].apply(
+        lambda mf: mf if mf == "optics" else mf_mapping[mf])
+    cvi_acc = metric_ranking.groupby(["Meta-Feature Set"])["accuracy"].mean().reset_index()
+    cvi_acc = cvi_acc[cvi_acc["Meta-Feature Set"] != "optics"]
+    mf_ari_runtime = mf_results[mf_results["iteration"] == 25].groupby(["Meta-Feature Set"])[
+        "Best ARI", "mf time"].mean().round(4).reset_index()
+
+    mf_ari_runtime["CVI Selection"] = mf_ari_runtime["Meta-Feature Set"].apply(
+        lambda x: Helper.cvi_accuracy(cvi_acc, x))
+    mf_ari_runtime["ARI (w=25)"] = mf_ari_runtime["Best ARI"]
+    mf_ari_runtime["Runtime Meta-Feature Extraction"] = mf_ari_runtime["mf time"]
+    mf_ari_runtime = mf_ari_runtime.drop(["Best ARI", "mf time"], axis=1)
+
+    # Generate Table 3
+    output_path = Path("evaluation_results/output")
+    output_path.mkdir(exist_ok=True, parents=True)
+    mf_ari_runtime.to_csv("evaluation_results/output/Table3.csv")
+
+
+def gen_figures(evaluation=False, real_world=False, ablation=False, varying_training_data=False):
+    # Load Results for different Meta-Feature Sets (cf. Section 7.2)
+
+    print("Start generating table 3 ...")
+    generate_table_3(evaluation)
+    print("Finished Generating Table 3")
+    # Load Synthetic Data Results
+
+    print("Loading results for synthetic data comparison ...")
+    merged_results, aml4c_df = load_synthetic_data_results(evaluation)
+    print("Finished")
+
+    # Generate Figure 4
+    print("Start generating Figure 4 ...")
+    selcted_methods = generate_figure_4(evaluation, merged_results)
+    print("Finished generating Figure 4")
+
+    # Generate Figure 5 (a - d)
+    print("Start generating Figure 5 ...")
+    generate_figure_5(evaluation, selcted_methods)
+    print("Finished generating Figure 5")
+
+    # Generate Figure 6 (a and b)
+    print("Start generating Figure 6 ...")
+    generate_figure_6(evaluation, aml4c_df)
+    print("Finished generating Figure 6")
+
+    # Generate Table 4
+    print("Start generating Table 4 ...")
+    generate_table_4(varying_training_data)
+    print("Finished Generating Table 4")
+
+    # Generate Figure 7
+    print("Start generating Figure 7 ...")
+    method_results = generate_figure_7(real_world)
+    print("Finished generating Figure 7")
+
+    # Generate Table 5
+    print("Start generating Table 5 ...")
+    generate_table_5(real_world, method_results)
+    print("Finished generating Table 5")
+
+    # Generate Table 6 (Ablation Study)
+    print("Start generating Table 6 ...")
+    generate_table_6(ablation)
+    print("Finished generating Table 6")
 
 
 if __name__ == "__main__":

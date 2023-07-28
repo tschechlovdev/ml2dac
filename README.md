@@ -10,8 +10,8 @@ algorithms.
 
 ## Reproducibility
 
-For reproducing our experiments, please switch to the branch "reproducibility" and see the ``reproducibility.md``
-for more detailed instructions.
+For reproducing our experiments, see the ``reproducibility.md`` for detailed instructions.
+
 
 ## Overview
 
