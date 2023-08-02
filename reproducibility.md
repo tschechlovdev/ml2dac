@@ -1,4 +1,7 @@
-# Reproducibility for ML2DAC: Meta-learning to Democratize AutoML for Clustering Analyses
+# Reproducibility for "ML2DAC: Meta-learning to Democratize AutoML for Clustering Analyses"
+
+This file contains the instructions and requirements to reproduce the results from our paper
+"ML2DAC: Meta-learning to Democratize AutoML for Clustering Analyses".
 
 ## Hardware Requirements 
 
@@ -8,23 +11,24 @@
 
 ## Software Requirements
 
-Only a running Docker installation is required. The scripts have been tested with the Versions: 
+Only a running Docker installation and git with git-lfs is required. 
+The scripts have been tested with the Versions: 
 
 * macOS: 20.10.11
-* Ubuntu: 23.0.5
+* Ubuntu: 22.04 and 23.0
+
+We do not support Windows, because the library that we use for the Optimizer ([SMAC](https://automl.github.io/SMAC3/v2.0.1)), does not support Windows.
 
 
-## Prerequisites 
+### Docker Installation
+To install docker please follow these steps:
 
-A docker installation is required, to install docker please follow these steps:
-
-* [Ubuntu](https://docs.docker.com/engine/install/ubuntu/) Not the Desktop Version
+* [Ubuntu](https://docs.docker.com/engine/install/ubuntu/) (Not the Desktop Version)
 * [macOS](https://docs.docker.com/desktop/install/mac-install/)
-* [Windows](https://docs.docker.com/desktop/install/windows-install/)
 
-However, note that the installation of Docker is more straightforwad on Ubuntu and macOS than on Windows.
+### Git and Git LFS
 
-Furthermore, we require git and git-lfs to be installed on the machine. 
+Furthermore, we require git and git large file storage (LFS) to be installed on the machine. 
 Typically, git is already installed on most machines. You can check that by running
 ```
 git --version
@@ -48,7 +52,7 @@ You can  verify the git-lfs installation by running ``git lfs -v`` .
 
 
 
-## Setup the project
+## Setting up the project
 
 You can clone the repository with 
 
@@ -79,9 +83,11 @@ The next step is to build the Docker image that simplifies the execution of the 
 
 ## Reproduce the Experiments 
 
-### Build the Container
+To reproduce the experiments, the docker image has to be build and subsequently, the docker container can be executed.
 
-First you have to build the docker imag.
+### Build the Docker Image
+
+First you have to build the docker image.
 To do this, navigate into the root directory (``\path\to\ml2dac``) of the project and run:
 
 ```
@@ -112,17 +118,17 @@ docker build -t ml2dac . --network=host
 **No Space Left on Device:** If you do not have any more space left on device due to docker containers, you can do some clean up by running 
 
 ```
-docker system prune --all --force
+docker system prune --all
 ```
 
 ### Run the Experiments
 
 If the image is successfully built, you can run the container. 
-Note that the default execution to fully reproduce the results takes around 72 hours.
-Therefore, we provide some parameters to reduce the runtime or just change the experiment setting. 
+Note that the default execution to reproduce all the results from the paper takes approximately 2 days.
+Therefore, we provide some parameters to reduce the runtime or just change the experiment setting.
 This might have an effect on the results, but the trends should be the same as in the paper.
 For instance, we only execute one run for each experiment per default.
-We will execute the experiments for reproducing the figures 4 -7 and tables 3 -6 from the evaluation in our paper. 
+We will execute the experiments for reproducing the figures 4 -7 and tables 3 - 6 from the evaluation in our paper. 
 
 Whenever the container is run, a result path on the host machine has to be defined. 
 This is done by passing the parameter `local/dir/output:/app/evaluation_results/plots_notebooks/output`.
@@ -144,29 +150,34 @@ The container will run in the background, even if you close the connection to a 
 This will also output the tables and figures from our paper as soon as the process is finished.
 You can find them in the specified output folder ``local/dir/output``.
 
-In order to reduce runtime or only execute certain experiments, the following parameters are available: 
+In the default setting, we execute only one run, which already takes approximately 2 days.
+Therefore, the figures and tables will probably not be exactly as they are shown in the paper, i.e., some small deviations might occur.
+Nevertheless, the trends and key messages should be the same as reported in our paper.
 
 #### Additional Parameters
+
+In order to reduce runtime or only execute certain experiments, the following parameters are available:
 
 **Only Figures:**
 This parameter sets if only the figures are generated, if set to `true` the other parameters become irrelevant. The default is `false`.
 
 * `-e ONLY_FIGURES=true`: generates only the figures
-* `-e ONLY_FIGURES=false`: experiments + figures
+* `-e ONLY_FIGURES=false`: executes the experiments and then creates figures (DEFAULT)
 
 **Experiment:**
 This parameter decides which experiments are executed. If all experiments should be executed, this parameter does not need to be defined.  The available values are RealWorld, Evaluation, VaryingTrainingData and Ablation. This can be passed as string but need to be comma separated: 
 
-* `-e EXPERIMENTS=RealWorld,Evaluation` only the comparison on the Real World Data and Evaluation, which is the evaluation on synthetic data.
-These are the most important experiments from our paper and the results are shown in the Figures 4 - 7. 
-* `-e EXPERIMENTS=RealWorld,Evaluation,VaryingTrainingData,Ablation`: would execute all experiments 
-* `-e EXPERIMENTS=RealWorld` just the comparison on the RealWorld Data 
-
+* `-e EXPERIMENTS=RealWorld,Evaluation,VaryingTrainingData,Ablation`: would execute all experiments (DEFAULT).
+* `-e EXPERIMENTS=Evaluation` executes the comparison on the synthetic data (Figure 4 - 6). 
+* `-e EXPERIMENTS=RealWorld` executes only the comparison on the Real-world data  (Section 7.4: Figure 7 and Table 5)
+* `-e EXPERIMENTS=Evaluation, RealWorld` executes the experiments for the comparison on synthetic and real-world data,
+which are the most important results of our paper. This creates the results for Figure 4 - 7 and Table 5. 
+* 
 **Runs:** The parameter `-e RUNS=1` defines the number of runs to execute for each experiment. 
 
 
-A full example which executes only the experiments RealWorld and Evaluation with the parameters *warmstarts=1*,*runs=1* and *loops=1* would look like: 
+A full example which executes only the experiments RealWorld and Evaluation would look like: 
 
 ```
-docker run -e ONLY_FIGURES=false -e EXPERIMENTS=RealWorld,Evaluation -e WARMSTARTS=1 -e LOOPS=1 -e RUNS=1 -v local/dir/output:/app/evaluation_results/output  -d ml2dac
+docker run -e ONLY_FIGURES=false -e EXPERIMENTS=RealWorld,Evaluation -e RUNS=1 -v local/dir/output:/app/evaluation_results/output  -d ml2dac
 ```

@@ -421,11 +421,7 @@ def generate_figure_6(evaluation, aml4c_df):
 
 
 def generate_table_4(varying_training_data):
-    if varying_training_data:
-        path = 'gen_results/evaluation_results/synthetic_data/vary_training_data/run_0/'
-        #path = f"evaluation_results/varying_training_data"
-    else:
-        path = f"evaluation_results/varying_training_data"
+    path = f"evaluation_results/varying_training_data"
 
     varying_training_data_results = pd.DataFrame()
     for n_train in list(range(2, 72, 10)):
@@ -438,7 +434,7 @@ def generate_table_4(varying_training_data):
         results["ARI"] = results["Best ARI"]
         varying_training_data_results = pd.concat([varying_training_data_results, results], ignore_index=True)
 
-    pd.DataFrame(varying_training_data_results[(varying_training_data_results["iteration"] == 100) & (
+    pd.DataFrame(varying_training_data_results[(varying_training_data_results["iteration"] == 70) & (
         varying_training_data_results["#Training Datasets"].isin(list(range(2, 64, 10))))].groupby(
         "#Training Datasets")[
                      "ARI"].mean().round(4)).transpose().to_csv(
@@ -573,10 +569,10 @@ def generate_table_5(real_world, method_results):
     method_results["Runtime (s)"] = method_results["wallclock time"]
 
     mean_runtime = method_results[method_results["iteration"] == 100].groupby(["Method"])[
-        "Runtime (s)"].mean().round(2) .reset_index()
+        "Runtime (s)"].mean().round(2).reset_index()
 
     median_runtime = method_results[method_results["iteration"] == 100].groupby(["Method"])[
-        "Runtime (s)"].median().round(2) .reset_index()
+        "Runtime (s)"].median().round(2).reset_index()
 
     runtime_real_world_df = mean_runtime.join(median_runtime.set_index("Method"), on="Method", lsuffix=" Median",
                                               rsuffix=" Mean")
@@ -587,7 +583,7 @@ def generate_table_5(real_world, method_results):
 def generate_table_6(ablation):
     if ablation:
         path_to_abl_study_results = Path("gen_results/evaluation_results/real_world/abl_study/statistical+general/")
-        #path_to_abl_study_results = Path("evaluation_results/abl_study/statistical+general")
+        # path_to_abl_study_results = Path("evaluation_results/abl_study/statistical+general")
     else:
         path_to_abl_study_results = Path("evaluation_results/abl_study/statistical+general/")
 
@@ -607,7 +603,7 @@ def generate_table_6(ablation):
 
     abl_results["ARI"] = abl_results["Best ARI"]
     abl_results = abl_results.drop("Best ARI", axis=1)
-    abl_results = abl_results[abl_results["iteration"] == 70].groupby("component")["ARI"].mean().round(4) * -1
+    abl_results = abl_results[abl_results["iteration"] == 30].groupby("component")["ARI"].mean().round(4) * -1
 
     abl_results.to_csv("evaluation_results/output/Table6.csv")
 

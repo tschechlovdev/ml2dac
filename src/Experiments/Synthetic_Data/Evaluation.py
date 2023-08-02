@@ -1,6 +1,7 @@
 import ast
 import os
 import pdb
+import random
 import shutil
 import sys
 import warnings
@@ -45,7 +46,7 @@ def process_result_to_dataframe(optimizer_result, additional_info, true_labels):
             value = value[0]
         optimizer_result_df[key] = value
 
-    #optimizer_result_df = Helper.add_iteration_metric_wallclock_time(optimizer_result_df, selected_cvi)
+    # optimizer_result_df = Helper.add_iteration_metric_wallclock_time(optimizer_result_df, selected_cvi)
     optimizer_result_df["iteration"] = [i + 1 for i in range(len(optimizer_result_df))]
     optimizer_result_df['ARI'] = optimizer_result_df["labels"].apply(
         lambda labels:
@@ -68,17 +69,15 @@ def process_result_to_dataframe(optimizer_result, additional_info, true_labels):
     return optimizer_result_df
 
 
-def run_experiment(limit_cs = True, 
-        cvi = "predict",  
-        n_warmstarts = 25, 
-        n_loops=100, 
-        time_limit = 120 * 60,  
-        mf_sets = "", 
-        mkr_path_string="../../MetaKnowledgeRepository", 
-        result_folder="gen_results/evaluation_results/synthetic_data"):
- # Import parameters for our experiments
-
-    #mkr_path = LearningPhase.mkr_path
+def run_experiment(limit_cs=True,
+                   cvi="predict",
+                   n_warmstarts=25,
+                   n_loops=100,
+                   time_limit=120 * 60,
+                   mf_sets="",
+                   mkr_path_string="../../MetaKnowledgeRepository",
+                   result_folder="gen_results/evaluation_results/synthetic_data"):
+    # mkr_path = LearningPhase.mkr_path
     mkr_path = Path(mkr_path_string)
 
     # Flag whether to run the baselines or not
@@ -91,7 +90,6 @@ def run_experiment(limit_cs = True,
 
     path_to_store_results = Path(result_folder)
 
-    # Todo: Flag whether to overwrite or not
     if not path_to_store_results.exists():
         path_to_store_results.mkdir(exist_ok=True, parents=True)
 
@@ -102,6 +100,9 @@ def run_experiment(limit_cs = True,
                    MetaFeatureExtractor.meta_feature_sets[5]  # stats+general
                    ]
 
+    seed = 1234
+    np.random.seed(seed)
+    random.seed(seed)
     # MetaFeatureExtractor.meta_feature_sets contains all meta-feature sets
     for mf_set in mf_sets:
 
@@ -116,8 +117,8 @@ def run_experiment(limit_cs = True,
             cvi_prediction_results = pd.DataFrame()
 
         # Create ML2DAC instance
-        ML2DAC = ApplicationPhase(  mkr_path=mkr_path,
-            mf_set=mf_set)
+        ML2DAC = ApplicationPhase(mkr_path=mkr_path,
+                                  mf_set=mf_set)
         for dataset, ground_truth_labels, dataset_name in zip(datasets, true_labels, dataset_names):
             if "dataset" in evaluation_results.columns and len(
                     evaluation_results[evaluation_results["dataset"] == dataset_name]) > 0:
@@ -134,8 +135,10 @@ def run_experiment(limit_cs = True,
                                                                                             n_optimizer_loops=n_loops,
                                                                                             cvi=cvi,
                                                                                             limit_cs=limit_cs,
-                                                                                            time_limit=time_limit)
+                                                                                            time_limit=time_limit,
+                                                                                            seed=seed)
             selected_cvi = additional_result_info["cvi"]
+            additional_result_info["random_seed"] = seed
 
             # Process result into dataframe for easier handling with best CVI/ best ARI scores after each iteration
             # Also remove columns that are not needed anymore
@@ -145,8 +148,6 @@ def run_experiment(limit_cs = True,
             # Store results for this meta-feature set
             evaluation_results.to_csv(path_to_store_results / f"results_{mf_set_string}.csv", index=False)
 
-
-           
             # Find out which CVI would be the optimal for this dataset
             optimal_cvis = pd.read_csv(mkr_path / LearningPhase.optimal_cvi_file_name)
             optimal_cvi = optimal_cvis[optimal_cvis["dataset"] == dataset_name]["cvi"].values[0]
@@ -174,8 +175,8 @@ def run_experiment(limit_cs = True,
         # AML4C
         AutoML4Clust.run_automl_four_clust()
 
+
 if __name__ == '__main__':
-   
     limit_cs = True
     cvi = "predict"
 
@@ -189,12 +190,11 @@ if __name__ == '__main__':
     # Flag whether to run the baselines or not
     run_baselines = False
 
-
-    run_experiment(limit_cs = limit_cs, 
-        cvi = cvi,  
-        n_warmstarts = n_warmstarts,
-        n_loops=n_loops, 
-        time_limit = time_limit,  
-        mf_sets = mf_sets, 
-        mkr_path_string=mkr_path, 
-        result_folder= "gen_results/evaluation_results/synthetic_data")
+    run_experiment(limit_cs=limit_cs,
+                   cvi=cvi,
+                   n_warmstarts=n_warmstarts,
+                   n_loops=n_loops,
+                   time_limit=time_limit,
+                   mf_sets=mf_sets,
+                   mkr_path_string=mkr_path,
+                   result_folder="gen_results/evaluation_results/synthetic_data")

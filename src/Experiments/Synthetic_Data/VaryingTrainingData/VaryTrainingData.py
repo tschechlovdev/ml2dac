@@ -84,7 +84,12 @@ def clean_up_optimizer_directory(optimizer_instance):
 
 
 def run_experiment(n_warmstarts=25, n_loops=100, limit_cs=True,
-                   result_path="gen_results/evaluation_results/synthetic_data/vary_training_data"):
+                   result_path="gen_results/evaluation_results/synthetic_data/vary_training_data",
+                   runs=1):
+
+    np.random.seed(1234)
+    random.seed(1234)
+
     n_warmstarts = 25
     n_loops = 100
     limit_cs = True
@@ -131,8 +136,6 @@ def run_experiment(n_warmstarts=25, n_loops=100, limit_cs=True,
     print(evaluated_configs)
 
     test_data = df_test.iloc[0]
-    runs = 1
-
     for run in range(runs):
         random_seed = (run + 1) * 1234
         for i in range(len(df_test)):
@@ -303,3 +306,7 @@ def run_experiment(n_warmstarts=25, n_loops=100, limit_cs=True,
                 print("finished optimization")
                 print(f"best obtained configuration is:")
                 print(opt_instance.get_incumbent())
+
+
+if __name__ == '__main__':
+    run_experiment()

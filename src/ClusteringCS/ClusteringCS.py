@@ -12,7 +12,7 @@ from sklearn.mixture import GaussianMixture
 
 
 def execute_algorithm_from_config(X: np.array, config: Configuration, run_complete_algorithm=False):
-    algo_instance = ALGORITHMS_MAP[config["algorithm"]]
+    algo_instance = get_ALGORITHMS_MAP()[config["algorithm"]]
     labels = algo_instance.execute_config(X, config, run_complete_algorithm)
     return labels
 
@@ -145,7 +145,8 @@ def get_ALGORITHMS_MAP(k_range=None):
                                                                      "random_state": 1234}),
             GMM_ALGORITHM: ClusteringAlgorithm(name=GMM_ALGORITHM, algorithm_class=GaussianMixture,
                                                parameters=[n_clusters_hyperparameter],
-                                               additional_kwargs={"n_init": 1, "max_iter": MAX_ITERATIONS}),
+                                               additional_kwargs={"n_init": 1, "max_iter": MAX_ITERATIONS,
+                                                                  "random_state": 1234}),
             MINI_BATCH_KMEANS: ClusteringAlgorithm(name=MINI_BATCH_KMEANS, algorithm_class=MiniBatchKMeans,
                                                    parameters=[n_clusters_hyperparameter],
                                                    additional_kwargs={"n_init": 1, "max_iter": MAX_ITERATIONS,

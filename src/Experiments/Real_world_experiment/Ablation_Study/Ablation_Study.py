@@ -16,8 +16,10 @@ warnings.filterwarnings(category=RuntimeWarning, action="ignore")
 warnings.filterwarnings(category=SettingWithCopyWarning, action="ignore")
 from smac.tae import FirstRunCrashedException
 import numpy as np
+
 np.random.seed(1234)
 random.seed(1234)
+
 
 def compute_ari_values(optimizer_result_df, ground_truth_labels):
     return optimizer_result_df["labels"].apply(
@@ -73,7 +75,6 @@ def run_experiment(runs=10,
                    n_loops=70,
                    components=["all", "no_algo_reduction", "no_cvi_selection", "no_warmstart"],
                    time_limit=240 * 60):
-
     np.random.seed(0)
     # Specify where to find our MKR
     mkr_path = LearningPhase.mkr_path
@@ -94,10 +95,11 @@ def run_experiment(runs=10,
         # MetaFeatureExtractor.meta_feature_sets[8] # "autocluster"
     ]
 
-    w = n_warmstarts    #n_loops = 70  # Number of optimizer loops. This is n_loops = n_warmstarts + x
+    w = n_warmstarts  # n_loops = 70  # Number of optimizer loops. This is n_loops = n_warmstarts + x
 
     for run in range(runs):
-        seed = run * 1234
+        seed = 3702
+        # seed = run*1234
         print(mf_sets_to_use)
         for mf_set in mf_sets_to_use:
             print("-------------")
@@ -123,7 +125,7 @@ def run_experiment(runs=10,
                     if component == "only_warmstarts":
                         n_warmstarts = n_loops
                         cvi = "predict"
-                        limit_cs = True
+                        limit_cs = False
 
                     elif component == "no_algo_reduction":
                         limit_cs = False
@@ -188,4 +190,4 @@ def run_experiment(runs=10,
 
 
 if __name__ == '__main__':
-    run_experiment(runs=10)
+    run_experiment(runs=1)
