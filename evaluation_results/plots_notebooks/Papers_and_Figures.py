@@ -434,7 +434,7 @@ def generate_table_4(varying_training_data):
         results["ARI"] = results["Best ARI"]
         varying_training_data_results = pd.concat([varying_training_data_results, results], ignore_index=True)
 
-    pd.DataFrame(varying_training_data_results[(varying_training_data_results["iteration"] == 70) & (
+    pd.DataFrame(varying_training_data_results[(varying_training_data_results["iteration"] == 100) & (
         varying_training_data_results["#Training Datasets"].isin(list(range(2, 64, 10))))].groupby(
         "#Training Datasets")[
                      "ARI"].mean().round(4)).transpose().to_csv(
